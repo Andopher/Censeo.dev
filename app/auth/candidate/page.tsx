@@ -35,9 +35,6 @@ function CandidateAuthForm() {
             if (result.error) {
                 setError(result.error);
                 setLoading(false);
-            } else if (result.confirmationRequired) {
-                setLoading(false);
-                setMessage('Please check your email to confirm your account.');
             } else {
                 // Success - Redirect to the test or history
                 router.push(next);
