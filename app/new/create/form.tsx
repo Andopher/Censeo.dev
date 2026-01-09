@@ -19,7 +19,7 @@ export default function CreateTestForm({ type }: { type: string }) {
     const [scenario, setScenario] = useState(template?.defaultScenario || '');
     const [timeLimit, setTimeLimit] = useState('');
     const [questions, setQuestions] = useState(
-        template?.questions.map(q => {
+        template?.questions?.map(q => {
             const constraints = q.constraints || {};
             // Set defaults for binary decision if missing
             if (q.type === 'binary_decision') {
