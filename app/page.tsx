@@ -32,14 +32,14 @@ export default function Home() {
             The modern platform for engineering judgment. Design scenario-based technical interviews that focus on tradeoffs, decisions, and actual engineering work.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <div className="flex flex-col items-center justify-center gap-2 pt-4">
             <Link href="/login">
               <Button size="lg" className="rounded-full px-12 h-14 text-lg">
                 Start for Free
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <p className="text-xs text-secondary mt-2 sm:mt-0 sm:absolute sm:bottom-10 opacity-60">
+            <p className="text-xs text-secondary opacity-60">
               No credit card required.
             </p>
           </div>
