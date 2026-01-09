@@ -31,9 +31,26 @@ export default async function PlayPage({
     const responseCount = responses?.length || 0;
     const isComplete = responseCount >= questions.length;
 
+    console.log('[PlayPage] Status:', {
+        responseCount,
+        questionsCount: questions.length,
+        isComplete,
+        alreadyCompleted: !!submission.completed_at
+    });
+
     // Mark complete if needed
     if (isComplete && !submission.completed_at) {
-        await supabase.from('submissions').update({ completed_at: new Date().toISOString() }).eq('id', sid);
+        console.log('[PlayPage] Marking submission as complete');
+        const { error } = await supabase
+            .from('submissions')
+            .update({ completed_at: new Date().toISOString() })
+            .eq('id', sid);
+
+        if (error) {
+            console.error('[PlayPage] Error marking complete:', error);
+        } else {
+            console.log('[PlayPage] Successfully marked as complete');
+        }
     }
 
     // Render Completed State
@@ -60,7 +77,7 @@ export default async function PlayPage({
             <main className="min-h-screen bg-gray-50 p-8">
                 <div className="max-w-3xl mx-auto space-y-8">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-bold text-black">{test.title} (Read Only)</h1>
+                        <h1 className="text-2xl font-bold text-black">{test.title}</h1>
                         <Link href="/history"><Button variant="ghost">Back</Button></Link>
                     </div>
 
@@ -74,10 +91,11 @@ export default async function PlayPage({
                         const val = ans ? (ans.value || (ans.options ? ans.options.join(', ') : JSON.stringify(ans))) : 'No answer';
                         return (
                             <div key={q.id} className="bg-white p-6 rounded-lg border border-border">
-                                <div className="mb-2 text-xs font-bold uppercase text-secondary">Step {i + 1}</div>
+                                <div className="mb-2 text-xs font-bold uppercase text-secondary">Question {i + 1}</div>
                                 <h3 className="font-medium mb-3 text-black">{q.prompt}</h3>
-                                <div className="bg-gray-50 p-3 rounded text-sm text-black border border-gray-200">
-                                    {val}
+                                <div className="bg-gray-50 p-4 rounded text-sm text-black border border-gray-200">
+                                    <div className="text-xs text-secondary mb-1">Your Answer:</div>
+                                    <div className="whitespace-pre-wrap">{val}</div>
                                 </div>
                             </div>
                         )

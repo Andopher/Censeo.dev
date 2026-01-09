@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { LogOut, Trash2 } from "lucide-react";
 import { ProfilePictureUpload } from "@/components/profile-picture-upload";
 import Image from "next/image";
+import Link from "next/link";
 
 export default async function ProfilePage() {
     const supabase = await createClient();
@@ -18,9 +19,12 @@ export default async function ProfilePage() {
     // Get profile data
     const { data: profile } = await supabase
         .from('profiles')
-        .select('profile_picture_url')
+        .select('profile_picture_url, role')
         .eq('id', user.id)
         .single();
+
+    // Determine back destination based on role
+    const backUrl = profile?.role === 'tester' ? '/dashboard' : '/history';
 
     async function handleSignOut() {
         'use server'
@@ -51,7 +55,12 @@ export default async function ProfilePage() {
         <main className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
             <Card className="max-w-md w-full">
                 <CardHeader>
-                    <CardTitle>Profile</CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Profile</CardTitle>
+                        <Link href={backUrl}>
+                            <Button variant="ghost" size="sm">← Back</Button>
+                        </Link>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Profile Picture */}

@@ -15,23 +15,25 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
         return redirect('/auth/candidate?next=/history');
     }
 
+    // Check user role - only testees can access history
+    const { data: roleCheck } = await supabase
+        .from('profiles')
+        .select('role, profile_picture_url')
+        .eq('id', user.id)
+        .single();
+
+    if (roleCheck?.role === 'tester') {
+        return redirect('/dashboard'); // Redirect testers to dashboard
+    }
+
     const email = user.email; // Always use logged in user's email/ID
 
-    // Fetch submissions for this candidate
-    const { data } = await supabase
+    // Get profile picture
+    const { data: submissions } = await supabase
         .from('submissions')
         .select('*, tests(title, template_type, scenario_text)')
         .eq('candidate_id', user.id) // Secure filter
         .order('completed_at', { ascending: false });
-
-    // Get profile picture
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('profile_picture_url')
-        .eq('id', user.id)
-        .single();
-
-    let submissions = data || [];
 
     async function search(formData: FormData) {
         'use server'
@@ -44,7 +46,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
             <div className="max-w-3xl w-full space-y-8">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold">Candidate History</h1>
-                    <ProfileButton userEmail={user.email || undefined} profilePictureUrl={profile?.profile_picture_url || undefined} />
+                    <ProfileButton userEmail={user.email || undefined} profilePictureUrl={roleCheck?.profile_picture_url || undefined} />
                 </div>
 
                 {/* removed search form, auto-show for logged in user */}
@@ -55,10 +57,10 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
 
                 {email && (
                     <div className="space-y-4">
-                        {submissions.length === 0 ? (
-                            <p className="text-center text-secondary">No history found for {email}.</p>
+                        {(!submissions || submissions.length === 0) ? (
+                            <p className="text-center text-secondary">No test submissions yet.</p>
                         ) : (
-                            submissions.map(sub => (
+                            (submissions || []).map(sub => (
                                 <Card key={sub.id} className="hover:border-accent transition-colors">
                                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                                         <div>
@@ -79,7 +81,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
                                         </p>
                                         <Link href={`/t/${sub.test_id}/play?sid=${sub.id}&mode=review`}>
                                             <Button variant="outline" size="sm">
-                                                {sub.completed_at ? 'View Answers' : 'Resume'}
+                                                {sub.completed_at ? 'View' : 'Review'}
                                             </Button>
                                         </Link>
                                     </CardContent>

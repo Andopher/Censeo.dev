@@ -16,6 +16,17 @@ export default async function DashboardPage() {
         return redirect('/login');
     }
 
+    // Check user role - only testers can access dashboard
+    const { data: roleCheck } = await supabase
+        .from('profiles')
+        .select('role, profile_picture_url')
+        .eq('id', user.id)
+        .single();
+
+    if (roleCheck?.role !== 'tester') {
+        return redirect('/history'); // Redirect non-testers to history
+    }
+
     // Filter tests by logged in creator - separate published and drafts
     const { data: publishedTests } = await supabase
         .from('tests')
@@ -30,13 +41,6 @@ export default async function DashboardPage() {
         .eq('created_by', user.id)
         .eq('is_published', false)
         .order('created_at', { ascending: false });
-
-    // Get profile picture
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('profile_picture_url')
-        .eq('id', user.id)
-        .single();
 
     return (
         <main className="min-h-screen bg-gray-50 p-8">
@@ -53,7 +57,7 @@ export default async function DashboardPage() {
                                 New Test
                             </Button>
                         </Link>
-                        <ProfileButton userEmail={user.email || undefined} profilePictureUrl={profile?.profile_picture_url || undefined} />
+                        <ProfileButton userEmail={user.email || undefined} profilePictureUrl={roleCheck?.profile_picture_url || undefined} />
                     </div>
                 </div>
 

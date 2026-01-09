@@ -31,10 +31,13 @@ export async function startTest(testId: string, formData: FormData) {
 }
 
 export async function submitResponse(submissionId: string, questionId: string, answer: any, timeSpent: number) {
-    const supabase = createClient();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    console.log('[submitResponse] Starting:', { submissionId, questionId, userId: user?.id });
 
     // 1. Save Response
-    const { error } = await (await supabase)
+    const { error } = await supabase
         .from('responses')
         .insert({
             submission_id: submissionId,
@@ -44,11 +47,19 @@ export async function submitResponse(submissionId: string, questionId: string, a
         });
 
     if (error) {
-        // If specific error "duplicate key value violates unique constraint", it means already answered.
-        // We can ignore or throw. For "Immutable", we should technically fail if they try to overwrite.
-        console.error('Error submitting response:', error);
-        throw new Error('Failed to submit response');
+        console.error('[submitResponse] Error submitting response:', error);
+        console.error('[submitResponse] Details:', { submissionId, questionId, userId: user?.id });
+
+        // Check if it's a duplicate key error (question already answered)
+        if (error.code === '23505') {
+            console.log('[submitResponse] Question already answered, skipping...');
+            return { success: true, duplicate: true };
+        }
+
+        throw new Error('Failed to submit response: ' + error.message);
     }
+
+    console.log('[submitResponse] Response saved successfully');
 
     // 2. Check if complete?
     // We can do this check on the client or subsequent server load, 

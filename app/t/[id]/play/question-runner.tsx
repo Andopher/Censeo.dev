@@ -44,9 +44,10 @@ export default function QuestionRunner({
                 setTimeLeft(remaining);
 
                 if (remaining <= 0) {
-                    // Time is up!
-                    // Optionally force submit or redirect.
-                    // For MVP: we just show "Time Up" and maybe disable inputs.
+                    // Time is up! Redirect to history after a brief delay
+                    setTimeout(() => {
+                        window.location.href = '/history';
+                    }, 2000); // 2 second delay to show the "Time Expired" message
                 }
             };
 
@@ -75,9 +76,11 @@ export default function QuestionRunner({
 
         try {
             await submitResponse(submissionId, question.id, finalAnswer, timeSpent);
-            router.refresh(); // Refresh to load next question
+            // Force page reload to show next question
+            window.location.reload();
         } catch (e) {
             console.error(e);
+            alert('Failed to submit response. Please try again.');
             setSubmitting(false);
         }
     };

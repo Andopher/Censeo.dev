@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { CopyLinkButton } from "@/components/dashboard/copy-link-button";
 import { DeleteTestButton } from "@/components/dashboard/delete-test-button";
+import { RefreshButton } from "@/components/dashboard/refresh-button";
 
 function timeAgo(dateStr: string) {
     if (!dateStr) return '';
@@ -39,6 +40,7 @@ export default async function TestDetailPage({ params }: { params: Promise<{ tes
                     <div className="flex justify-between items-center mt-2">
                         <h1 className="text-3xl font-bold">{test.title} / Submissions</h1>
                         <div className="flex gap-2">
+                            <RefreshButton />
                             <CopyLinkButton testId={test.id} />
                             <DeleteTestButton testId={test.id} testTitle={test.title} />
                         </div>
@@ -66,8 +68,15 @@ export default async function TestDetailPage({ params }: { params: Promise<{ tes
                                 return (
                                     <tr key={sub.id} className="border-b border-border last:border-0 hover:bg-gray-50">
                                         <td className="p-4 font-medium">
-                                            <div>{sub.candidate_name}</div>
-                                            <div className="text-xs text-secondary">{sub.candidate_email}</div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center text-xs font-bold">
+                                                    {sub.candidate_name?.substring(0, 2).toUpperCase() || sub.candidate_email?.substring(0, 2).toUpperCase() || '??'}
+                                                </div>
+                                                <div>
+                                                    <div>{sub.candidate_name}</div>
+                                                    <div className="text-xs text-secondary">{sub.candidate_email}</div>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td className="p-4">
                                             {isComplete ? (
