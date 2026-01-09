@@ -47,6 +47,43 @@ export default async function TestDetailPage({ params }: { params: Promise<{ tes
                     </div>
                 </div>
 
+                {/* Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-secondary">Total Candidates</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{submissions?.length || 0}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-secondary">Completed</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {submissions?.filter(s => s.completed_at).length || 0}
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-secondary">Avg. Time Spent</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {(() => {
+                                    const completed = submissions?.filter(s => s.completed_at) || [];
+                                    if (completed.length === 0) return '-';
+                                    const totalMs = completed.reduce((acc, s) => acc + (new Date(s.completed_at).getTime() - new Date(s.started_at).getTime()), 0);
+                                    return Math.round(totalMs / completed.length / 60000) + 'm';
+                                })()}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
                 <div className="bg-white rounded-lg border border-border overflow-hidden">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-gray-100 border-b border-border text-secondary font-medium">

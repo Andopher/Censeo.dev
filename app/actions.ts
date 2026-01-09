@@ -11,6 +11,19 @@ export async function startTest(testId: string, formData: FormData) {
     const name = formData.get('name') as string;
     const email = formData.get('email') as string || user.email!;
 
+    // 1. Check for existing submission (Prevent Duplicates)
+    const { data: existing } = await supabase
+        .from('submissions')
+        .select('id')
+        .eq('test_id', testId)
+        .eq('candidate_id', user.id)
+        .maybeSingle();
+
+    if (existing) {
+        console.log(`[StartTest] Resuming existing submission ${existing.id}`);
+        return redirect(`/t/${testId}/play?sid=${existing.id}`);
+    }
+
     const { data: submission, error } = await supabase
         .from('submissions')
         .insert({
