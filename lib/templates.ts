@@ -1,6 +1,6 @@
 
 export type QuestionType = 'forced_ranking' | 'multi_select' | 'binary_decision' | 'short_text';
-export type TemplateType = 'frontend_engineer' | 'backend_engineer' | 'fullstack_engineer' | 'blank';
+export type TemplateType = 'senior_frontend' | 'senior_backend' | 'senior_fullstack' | 'junior_frontend' | 'junior_backend' | 'junior_fullstack' | 'blank';
 
 export interface TemplateQuestion {
     order: number;
@@ -19,8 +19,8 @@ export interface TemplateDef {
 
 export const TEMPLATES: TemplateDef[] = [
     {
-        type: 'frontend_engineer',
-        title: 'Frontend Engineer Exam',
+        type: 'senior_frontend',
+        title: 'Senior Frontend Engineer',
         description: 'Evaluate design thinking, UX judgment, and performance tradeoffs in frontend development.',
         defaultScenario: 'You\'re leading the redesign of an e-commerce product page that currently has a 12% conversion rate. The page loads 47 components, makes 23 API calls, and has a Time to Interactive of 4.2 seconds on 3G. Leadership wants "more interactivity" but the data shows 68% of users are on mobile with spotty connections.',
         questions: [
@@ -76,8 +76,8 @@ export const TEMPLATES: TemplateDef[] = [
         ]
     },
     {
-        type: 'backend_engineer',
-        title: 'Backend Engineer Exam',
+        type: 'senior_backend',
+        title: 'Senior Backend Engineer',
         description: 'Assess systems thinking, scalability judgment, and operational maturity.',
         defaultScenario: 'You maintain an API that serves 50M requests/day. A new feature just shipped: users can now "follow" other users. Within 3 hours, the notifications service is melting down. Each "follow" event triggers notifications to followers-of-followers (virality feature). One power user with 2M followers just followed someone with 800k followers. Your DB has 9000 active connections (max is 10k). Average response time is 18 seconds.',
         questions: [
@@ -132,8 +132,8 @@ export const TEMPLATES: TemplateDef[] = [
         ]
     },
     {
-        type: 'fullstack_engineer',
-        title: 'Full Stack Engineer Exam',
+        type: 'senior_fullstack',
+        title: 'Senior Full Stack Engineer',
         description: 'Evaluate end-to-end product judgment, cross-layer tradeoffs, and ownership mentality.',
         defaultScenario: 'You\'re a founding engineer at a SaaS startup. The product is a collaborative whiteboard (think Miro/Figma-lite). You have 800 users, $40k MRR, and a 6-person team. A major enterprise prospect (potential $500k/year contract) demands: real-time collaboration for 200 concurrent users, SSO with SAML, and SOC2 compliance. Your current stack: Next.js, Supabase (Postgres), Vercel. Real-time is done with polling every 2 seconds. You have 8 weeks.',
         questions: [
@@ -189,6 +189,174 @@ export const TEMPLATES: TemplateDef[] = [
                 order: 6,
                 type: 'short_text',
                 defaultPrompt: 'FINAL QUESTION: You shipped. The enterprise client is happy. But 3 of your original 800 users churned, citing "the app feels bloated now." Your NPS dropped from 62 to 44. What happened, and how do you prevent this next time?',
+            }
+        ]
+    },
+    {
+        type: 'junior_frontend',
+        title: 'Junior Frontend Engineer',
+        description: 'Evaluate core frontend skills, debugging approach, and learning mindset.',
+        defaultScenario: 'You\'re working on a marketing landing page for a new product launch. The page has a hero section, a feature comparison table, and a contact form. Your team lead reviewed your PR and left feedback: "The page looks great on desktop, but on mobile the contact form is cut off and the table scrolls horizontally. Also, the hero image is 4MB and the page takes 8 seconds to load on 3G."',
+        questions: [
+            {
+                order: 1,
+                type: 'multi_select',
+                defaultPrompt: 'Which 2 issues would you fix first?',
+                constraints: {
+                    max_select: 2,
+                    options: [
+                        'Fix the mobile contact form layout',
+                        'Optimize the hero image size',
+                        'Make the table responsive',
+                        'Add loading states',
+                        'Test on different browsers'
+                    ]
+                }
+            },
+            {
+                order: 2,
+                type: 'short_text',
+                defaultPrompt: 'How would you optimize the 4MB hero image? Be specific about the technique(s) you\'d use.',
+            },
+            {
+                order: 3,
+                type: 'binary_decision',
+                defaultPrompt: 'For the comparison table on mobile, would you:',
+                constraints: {
+                    yes_label: 'Allow horizontal scroll (simple)',
+                    no_label: 'Redesign as stacked cards (complex but better UX)'
+                }
+            },
+            {
+                order: 4,
+                type: 'short_text',
+                defaultPrompt: 'Your form validation only runs on submit, so users don\'t see errors until they click "Submit". A user complains it feels "broken". How would you improve this?',
+            },
+            {
+                order: 5,
+                type: 'forced_ranking',
+                defaultPrompt: 'Your team lead suggests adding animations. Rank these by importance (most to least):',
+                constraints: {
+                    options: [
+                        'Smooth scroll to form section',
+                        'Fade-in for feature cards',
+                        'Button hover effects',
+                        'Page load animation',
+                        'Form success confirmation'
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        type: 'junior_backend',
+        title: 'Junior Backend Engineer',
+        description: 'Assess problem-solving, API design basics, and error handling skills.',
+        defaultScenario: 'You\'re building a REST API for a blog platform. The API has endpoints for creating posts, fetching posts, and adding comments. A user reports: "When I try to add a comment to a post that doesn\'t exist, I get a 500 error and the app crashes." You check the logs and see: `TypeError: Cannot read property \'comments\' of null`.',
+        questions: [
+            {
+                order: 1,
+                type: 'binary_decision',
+                defaultPrompt: 'What HTTP status code should you return when a post doesn\'t exist?',
+                constraints: {
+                    yes_label: '404 Not Found',
+                    no_label: '400 Bad Request'
+                }
+            },
+            {
+                order: 2,
+                type: 'short_text',
+                defaultPrompt: 'Write pseudocode or describe how you\'d fix this bug. What would you check before trying to add the comment?',
+            },
+            {
+                order: 3,
+                type: 'multi_select',
+                defaultPrompt: 'Your API endpoint takes 3 seconds to load a post with 500 comments. Pick 2 ways to improve this:',
+                constraints: {
+                    max_select: 2,
+                    options: [
+                        'Add pagination to comments (e.g., load 50 at a time)',
+                        'Cache the entire response in Redis',
+                        'Add database indexes on post_id',
+                        'Use GraphQL instead of REST',
+                        'Load comments in a separate API call'
+                    ]
+                }
+            },
+            {
+                order: 4,
+                type: 'short_text',
+                defaultPrompt: 'A user submits a comment with a 10,000-character essay (your UI only shows 500 chars). Should you store all 10,000 characters in the database? Why or why not?',
+            },
+            {
+                order: 5,
+                type: 'forced_ranking',
+                defaultPrompt: 'You need to add authentication. Rank these by implementation priority (first to last):',
+                constraints: {
+                    options: [
+                        'Hash passwords before storing them',
+                        'Add rate limiting to login endpoint',
+                        'Implement "Forgot Password" flow',
+                        'Add Google OAuth login',
+                        'Create admin vs. user roles'
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        type: 'junior_fullstack',
+        title: 'Junior Full Stack Engineer',
+        description: 'Test end-to-end feature development, debugging across layers, and user empathy.',
+        defaultScenario: 'You\'re building a "favorites" feature for a recipe app. Users can click a heart icon to save recipes. You built the UI (heart icon toggles on click), the API endpoint (POST /favorites), and the database table. But users are reporting: "When I favorite a recipe and refresh the page, the heart is empty again." You check and realize you forgot to fetch the user\'s favorites on page load.',
+        questions: [
+            {
+                order: 1,
+                type: 'binary_decision',
+                defaultPrompt: 'Where should you fetch the user\'s favorites list?',
+                constraints: {
+                    yes_label: 'On page load (fetch once, store in state)',
+                    no_label: 'Every time they view a recipe (fetch per recipe)'
+                }
+            },
+            {
+                order: 2,
+                type: 'short_text',
+                defaultPrompt: 'Describe how you\'d structure the API response for GET /favorites. What data would you include?',
+            },
+            {
+                order: 3,
+                type: 'multi_select',
+                defaultPrompt: 'When a user clicks the heart icon, what should happen? (Pick 2)',
+                constraints: {
+                    max_select: 2,
+                    options: [
+                        'Update the UI immediately (optimistic update)',
+                        'Show a loading spinner until API responds',
+                        'Send POST request to server',
+                        'Wait for server response before updating UI',
+                        'Store favorite in localStorage as backup'
+                    ]
+                }
+            },
+            {
+                order: 4,
+                type: 'short_text',
+                defaultPrompt: 'A user clicks the heart icon 5 times rapidly (on/off/on/off/on). How would you prevent sending 5 API requests?',
+            },
+            {
+                order: 5,
+                type: 'forced_ranking',
+                defaultPrompt: 'Your PM asks for these features next. Rank by what you\'d build first (top = first):',
+                constraints: {
+                    options: [
+                        'Show "favorited by X people" count',
+                        'Add a "My Favorites" page',
+                        'Fix the bug where unfavoriting doesn\'t work offline',
+                        'Let users organize favorites into folders',
+                        'Add email notifications for new recipes from favorited chefs'
+                    ]
+                }
             }
         ]
     },
