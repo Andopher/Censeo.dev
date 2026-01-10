@@ -44,9 +44,9 @@ export default function QuestionRunner({
                 setTimeLeft(remaining);
 
                 if (remaining <= 0) {
-                    // Time is up! Redirect to history after a brief delay
+                    // Time is up! Reload to let server handle completion status
                     setTimeout(() => {
-                        window.location.href = '/history';
+                        window.location.reload();
                     }, 2000); // 2 second delay to show the "Time Expired" message
                 }
             };
@@ -113,6 +113,15 @@ export default function QuestionRunner({
                     <div className="p-4 bg-yellow-50 text-yellow-800 text-sm mb-4 border border-yellow-200 rounded">
                         Ranking: Please type your ranked list below (Top = Highest Priority).
                     </div>
+
+                    {constraints?.options?.length > 0 && (
+                        <div className="bg-gray-50 p-4 rounded border border-gray-100 mb-4">
+                            <div className="text-xs font-bold text-secondary mb-2 uppercase">Items to Rank:</div>
+                            <ul className="list-disc pl-4 space-y-1 text-sm">
+                                {constraints.options.map((opt: string) => <li key={opt}>{opt}</li>)}
+                            </ul>
+                        </div>
+                    )}
                     <textarea
                         className="w-full min-h-[150px] p-3 border rounded text-sm"
                         placeholder={`1. Option A\n2. Option B...`}

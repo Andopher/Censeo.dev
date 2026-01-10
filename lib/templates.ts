@@ -27,51 +27,55 @@ export const TEMPLATES: TemplateDef[] = [
             {
                 order: 1,
                 type: 'forced_ranking',
-                defaultPrompt: 'Rank these interventions by impact on conversion rate (most to least impactful):',
+                defaultPrompt: 'Rank these interventions by impact on conversion rate. You must prioritize TTI over aesthetics.',
                 constraints: {
                     options: [
                         'Reduce initial JavaScript bundle by 60%',
-                        'Add a 3D product viewer with gesture controls',
-                        'Implement skeleton screens for perceived performance',
-                        'Remove the image carousel, show one hero image',
-                        'Prefetch product data on category page hover'
+                        'Remove the image carousel (save 1.2MB)',
+                        'Implement skeleton screens (perceived speed only)',
+                        'Add 3D product viewer (marketing request)',
+                        'Prefetch data on hover'
                     ]
                 }
             },
             {
                 order: 2,
-                type: 'short_text',
-                defaultPrompt: 'The PM insists the new 3D viewer is "table stakes" because a competitor has it. How do you respond? Be specific about what data you\'d need or what compromise you\'d propose.',
+                type: 'binary_decision',
+                defaultPrompt: 'The PM insists the new 3D viewer is "table stakes". It adds 1.5s to the load time. Do you build it?',
+                constraints: {
+                    yes_label: 'Yes, build it (Impact: Slower TTI)',
+                    no_label: 'No, refuse it (Impact: PM conflict)'
+                }
             },
             {
                 order: 3,
                 type: 'binary_decision',
-                defaultPrompt: 'You discover that 34% of users have JavaScript disabled or blocked. Do you:',
+                defaultPrompt: 'You discover 34% of users have JavaScript disabled/fail. You have 2 days until launch. Do you build a no-JS fallback?',
                 constraints: {
-                    yes_label: 'Build a no-JS fallback (adds 2 weeks)',
-                    no_label: 'Show a "please enable JS" message'
+                    yes_label: 'Yes (Skip other QA to finish fallback)',
+                    no_label: 'No (Show "Please enable JS" error)'
                 }
             },
             {
                 order: 4,
                 type: 'multi_select',
-                defaultPrompt: 'Pick the 2 metrics you\'d track religiously for this redesign:',
+                defaultPrompt: 'Pick exactly 2 metrics that determine if this redesign is a failure. No vanilla "Conversion Rate".',
                 constraints: {
                     max_select: 2,
                     options: [
                         'Time to Interactive (TTI)',
-                        'Conversion Rate',
-                        'Bounce Rate',
-                        'Lighthouse Score',
-                        'Add-to-Cart Rate',
-                        'Session Duration'
+                        'Bounce Rate on 3G Networks',
+                        'Add-to-Cart Click Latency',
+                        'Lighthouse Accessibility Score',
+                        'Customer Acquisition Cost',
+                        'Total Page Weight'
                     ]
                 }
             },
             {
                 order: 5,
                 type: 'short_text',
-                defaultPrompt: 'SURPRISE: After launch, conversion increases by 3%, but customer support tickets about "missing features" increase by 180%. The old page had 12 filters; you shipped with 4 "essential" ones. What happened, and what do you do?',
+                defaultPrompt: 'SURPRISE: Conversion increased 3%, but support tickets spiked 180%. You cut the "Advanced Filters" to save time. What is the single specific action you take in the next hour? (Max 2 sentences)',
             }
         ]
     },
@@ -84,50 +88,57 @@ export const TEMPLATES: TemplateDef[] = [
             {
                 order: 1,
                 type: 'forced_ranking',
-                defaultPrompt: 'Rank your immediate actions (first to last):',
+                defaultPrompt: 'Rank your immediate actions (first = do immediately):',
                 constraints: {
                     options: [
-                        'Kill the connection pool, restart the DB',
-                        'Disable the virality feature via feature flag',
-                        'Add a job queue (Redis/RabbitMQ) for async processing',
-                        'Rate-limit notifications per user',
-                        'Deploy a read replica for notification queries'
+                        'Kill the connection pool (Will drop 100% of current reqs)',
+                        'Disable virality feature (Feature flag)',
+                        'Deploy read replica (Takes 15 mins)',
+                        'Rate-limit notifications (Code change + deploy)',
+                        'Ignore and let it stabilize'
                     ]
                 }
             },
             {
                 order: 2,
-                type: 'short_text',
-                defaultPrompt: 'You disabled the virality feature. Users are furious on Twitter. The VP of Product is demanding you turn it back on. How do you explain the technical constraints to non-engineers without sounding like you\'re saying "no"?',
+                type: 'binary_decision',
+                defaultPrompt: 'You disabled the virality feature. The VP of Product screams "Turn it back on NOW, we are losing momentum!" The DB is still at 90% CPU. Do you re-enable it?',
+                constraints: {
+                    yes_label: 'Yes (Risk total outage)',
+                    no_label: 'No (Risk being fired)'
+                }
             },
             {
                 order: 3,
                 type: 'binary_decision',
-                defaultPrompt: 'To ship a "safe" version faster, you could add a hard cap: max 10k notifications per follow event, silently dropping the rest. No user-facing error. Do you ship it?',
+                defaultPrompt: 'To ship a "safe" version, you add a cap: max 10k notifications/event. Excess are silently dropped. Users wont know. Do you ship this?',
                 constraints: {
-                    yes_label: 'Ship the silent cap (fast, hides complexity)',
-                    no_label: 'Show an error when cap is hit (slow, honest)'
+                    yes_label: 'Ship it (dishonest but stable)',
+                    no_label: 'Don\'t ship (honest but broken)'
                 }
             },
             {
                 order: 4,
                 type: 'multi_select',
-                defaultPrompt: 'For the long-term fix, which 2 approaches do you advocate for?',
+                defaultPrompt: 'Pick exactly 1 architecture change for next week. You cannot pick "Event-driven" (takes too long).',
                 constraints: {
-                    max_select: 2,
+                    max_select: 1,
                     options: [
-                        'Event-driven architecture with Kafka',
-                        'GraphQL subscriptions for real-time delivery',
-                        'Batch processing with cron jobs every 15 min',
-                        'Fanout-on-write (pre-compute all timelines)',
-                        'Fanout-on-read (compute on demand)'
+                        'GraphQL Subscriptions (Complex)',
+                        'Fanout-on-read (Compute intensive)',
+                        'Fanout-on-write (Storage intensive)',
+                        'Batch processing (High latency)'
                     ]
                 }
             },
             {
                 order: 5,
-                type: 'short_text',
-                defaultPrompt: 'Six months later, the CEO wants to add "AI-powered notification summaries" that require calling an LLM API ($0.002/request, 800ms P95 latency). This would apply to 30M notifications/day. What\'s your take? Be specific about costs, architecture, or trade-offs.',
+                type: 'binary_decision',
+                defaultPrompt: 'CEO wants "AI Summaries". Cost: $0.002/req. Vol: 30M req/day. Budget: $10k/month. Do you approve this?',
+                constraints: {
+                    yes_label: 'Yes (I can optimize costs later)',
+                    no_label: 'No (Math says $1.8M/month)'
+                }
             }
         ]
     },
@@ -201,48 +212,61 @@ export const TEMPLATES: TemplateDef[] = [
             {
                 order: 1,
                 type: 'multi_select',
-                defaultPrompt: 'Which 2 issues would you fix first?',
+                defaultPrompt: 'Which 2 issues drastically impact the user (ignore "nice to haves")?',
                 constraints: {
                     max_select: 2,
                     options: [
-                        'Fix the mobile contact form layout',
-                        'Optimize the hero image size',
-                        'Make the table responsive',
-                        'Add loading states',
-                        'Test on different browsers'
+                        'Mobile form cut off (Functional blocker)',
+                        'Page load 8s (Performance blocker)',
+                        'Table scrolls horizontally (UX annoyance)',
+                        'Hero image size (Root cause)',
+                        'Lack of animations'
                     ]
                 }
             },
             {
                 order: 2,
-                type: 'short_text',
-                defaultPrompt: 'How would you optimize the 4MB hero image? Be specific about the technique(s) you\'d use.',
+                type: 'multi_select',
+                defaultPrompt: 'You must reduce the hero image size below 100KB. Which SINGLE format do you choose?',
+                constraints: {
+                    max_select: 1,
+                    options: [
+                        'WebP (Modern, high compression)',
+                        'PNG (Lossless, heavy)',
+                        'JPEG (Lossy, standard)',
+                        'SVG (Vector, unrelated)'
+                    ]
+                }
             },
             {
                 order: 3,
                 type: 'binary_decision',
-                defaultPrompt: 'For the comparison table on mobile, would you:',
+                defaultPrompt: 'For the mobile table, you have 4 hours. Do you:',
                 constraints: {
-                    yes_label: 'Allow horizontal scroll (simple)',
-                    no_label: 'Redesign as stacked cards (complex but better UX)'
+                    yes_label: 'Allow horizontal scroll (Takes 10 mins)',
+                    no_label: 'Redesign as stacked cards (Takes 6 hours)'
                 }
             },
             {
                 order: 4,
-                type: 'short_text',
-                defaultPrompt: 'Your form validation only runs on submit, so users don\'t see errors until they click "Submit". A user complains it feels "broken". How would you improve this?',
+                type: 'binary_decision',
+                defaultPrompt: 'Validation is annoying. When should the error message appear?',
+                constraints: {
+                    yes_label: 'On Blur (When they leave the field)',
+                    no_label: 'On Change (Every keystroke)'
+                }
             },
             {
                 order: 5,
                 type: 'forced_ranking',
-                defaultPrompt: 'Your team lead suggests adding animations. Rank these by importance (most to least):',
+                defaultPrompt: 'Rank these animations by importance (Functional > Delight):',
                 constraints: {
                     options: [
-                        'Smooth scroll to form section',
-                        'Fade-in for feature cards',
+                        'Form success confirmation',
                         'Button hover effects',
-                        'Page load animation',
-                        'Form success confirmation'
+                        'Smooth scroll',
+                        'Fade-in feature cards',
+                        'Page load spinner'
                     ]
                 }
             }
@@ -252,53 +276,51 @@ export const TEMPLATES: TemplateDef[] = [
         type: 'junior_backend',
         title: 'Junior Backend Engineer',
         description: 'Assess problem-solving, API design basics, and error handling skills.',
-        defaultScenario: 'You\'re building a REST API for a blog platform. The API has endpoints for creating posts, fetching posts, and adding comments. A user reports: "When I try to add a comment to a post that doesn\'t exist, I get a 500 error and the app crashes." You check the logs and see: `TypeError: Cannot read property \'comments\' of null`.',
+        defaultScenario: 'You\'re building a REST API. A user reports: "When I try to add a comment to a post that doesn\'t exist, I get a 500 error." Logs show: `TypeError: Cannot read property \'comments\' of null`.',
         questions: [
             {
                 order: 1,
                 type: 'binary_decision',
-                defaultPrompt: 'What HTTP status code should you return when a post doesn\'t exist?',
+                defaultPrompt: 'What status code do you return when the post is missing?',
                 constraints: {
-                    yes_label: '404 Not Found',
-                    no_label: '400 Bad Request'
+                    yes_label: '404 Not Found (Correct resource missing)',
+                    no_label: '400 Bad Request (Client error)'
                 }
             },
             {
                 order: 2,
                 type: 'short_text',
-                defaultPrompt: 'Write pseudocode or describe how you\'d fix this bug. What would you check before trying to add the comment?',
+                defaultPrompt: 'The bug is a missing null check. Write the ONE line of code you add to fix this.',
             },
             {
                 order: 3,
-                type: 'multi_select',
-                defaultPrompt: 'Your API endpoint takes 3 seconds to load a post with 500 comments. Pick 2 ways to improve this:',
+                type: 'binary_decision',
+                defaultPrompt: 'API takes 3s to load 500 comments. You can only do one fix. Which one?',
                 constraints: {
-                    max_select: 2,
-                    options: [
-                        'Add pagination to comments (e.g., load 50 at a time)',
-                        'Cache the entire response in Redis',
-                        'Add database indexes on post_id',
-                        'Use GraphQL instead of REST',
-                        'Load comments in a separate API call'
-                    ]
+                    yes_label: 'Add Pagination (Load 50 at a time)',
+                    no_label: 'Cache in Redis (Fast but complex)'
                 }
             },
             {
                 order: 4,
-                type: 'short_text',
-                defaultPrompt: 'A user submits a comment with a 10,000-character essay (your UI only shows 500 chars). Should you store all 10,000 characters in the database? Why or why not?',
+                type: 'binary_decision',
+                defaultPrompt: 'User submits a 10,000 char comment. DB limit is usually text (unlimited) but UI breaks. Do you truncate it?',
+                constraints: {
+                    yes_label: 'Yes, truncate at 500 chars (Data loss)',
+                    no_label: 'No, reject request with 400 error (User friction)'
+                }
             },
             {
                 order: 5,
                 type: 'forced_ranking',
-                defaultPrompt: 'You need to add authentication. Rank these by implementation priority (first to last):',
+                defaultPrompt: 'Rank these auth tasks by security priority (first = critical):',
                 constraints: {
                     options: [
-                        'Hash passwords before storing them',
-                        'Add rate limiting to login endpoint',
-                        'Implement "Forgot Password" flow',
-                        'Add Google OAuth login',
-                        'Create admin vs. user roles'
+                        'Hash passwords (bcrypt)',
+                        'Add rate limiting',
+                        'Implement Forgot Password',
+                        'Add Google OAuth',
+                        'Build Admin Dashboard'
                     ]
                 }
             }
@@ -315,46 +337,48 @@ export const TEMPLATES: TemplateDef[] = [
                 type: 'binary_decision',
                 defaultPrompt: 'Where should you fetch the user\'s favorites list?',
                 constraints: {
-                    yes_label: 'On page load (fetch once, store in state)',
-                    no_label: 'Every time they view a recipe (fetch per recipe)'
+                    yes_label: 'On root/page load (Fetch once, global state)',
+                    no_label: 'On each recipe (Fetch repeatedly, fresh data)'
                 }
             },
             {
                 order: 2,
-                type: 'short_text',
-                defaultPrompt: 'Describe how you\'d structure the API response for GET /favorites. What data would you include?',
+                type: 'binary_decision',
+                defaultPrompt: 'API Design: GET /favorites returns list of IDs or full Recipe objects?',
+                constraints: {
+                    yes_label: 'IDs only (Small payload, requires N+1 or bulk fetch)',
+                    no_label: 'Full Objects (Heavy payload, instant UI)'
+                }
             },
             {
                 order: 3,
-                type: 'multi_select',
-                defaultPrompt: 'When a user clicks the heart icon, what should happen? (Pick 2)',
+                type: 'binary_decision',
+                defaultPrompt: 'When clicking heart, do you wait for server?',
                 constraints: {
-                    max_select: 2,
-                    options: [
-                        'Update the UI immediately (optimistic update)',
-                        'Show a loading spinner until API responds',
-                        'Send POST request to server',
-                        'Wait for server response before updating UI',
-                        'Store favorite in localStorage as backup'
-                    ]
+                    yes_label: 'Optimistic (Instant UI, risk rollback)',
+                    no_label: 'Loading State (Slow UI, guaranteed truth)'
                 }
             },
             {
                 order: 4,
-                type: 'short_text',
-                defaultPrompt: 'A user clicks the heart icon 5 times rapidly (on/off/on/off/on). How would you prevent sending 5 API requests?',
+                type: 'binary_decision',
+                defaultPrompt: 'User clicks rapidly (5 times). Which technique prevents 5 API calls?',
+                constraints: {
+                    yes_label: 'Debounce (Wait for pause)',
+                    no_label: 'Throttle (Limit rate)'
+                }
             },
             {
                 order: 5,
                 type: 'forced_ranking',
-                defaultPrompt: 'Your PM asks for these features next. Rank by what you\'d build first (top = first):',
+                defaultPrompt: 'PM wants features. Rank by impact on retention:',
                 constraints: {
                     options: [
+                        'Add email notifications for new recipes',
                         'Show "favorited by X people" count',
                         'Add a "My Favorites" page',
-                        'Fix the bug where unfavoriting doesn\'t work offline',
-                        'Let users organize favorites into folders',
-                        'Add email notifications for new recipes from favorited chefs'
+                        'Fix offline un-favoriting bug',
+                        'Folders for favorites'
                     ]
                 }
             }

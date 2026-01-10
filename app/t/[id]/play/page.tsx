@@ -29,12 +29,20 @@ export default async function PlayPage({
     if (!submission || !test || !questions) return <div>Error loading assessment.</div>;
 
     const responseCount = responses?.length || 0;
-    const isComplete = responseCount >= questions.length;
+
+    // Check Time Expiry
+    const startedAt = new Date(submission.started_at).getTime();
+    const now = Date.now();
+    const timeLimitMs = test.time_limit_seconds ? test.time_limit_seconds * 1000 : 0;
+    const isExpired = timeLimitMs > 0 && (now - startedAt > timeLimitMs);
+
+    const isComplete = responseCount >= questions.length || isExpired;
 
     console.log('[PlayPage] Status:', {
         responseCount,
         questionsCount: questions.length,
         isComplete,
+        isExpired,
         alreadyCompleted: !!submission.completed_at
     });
 
