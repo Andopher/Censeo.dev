@@ -49,9 +49,44 @@ export default async function PlayPage({
     // Mark complete if needed
     if (isComplete && !submission.completed_at) {
         console.log('[PlayPage] Marking submission as complete');
+
+        // Calculate Score
+        let correctCount = 0;
+        let totalScorable = 0;
+
+        questions.forEach(q => {
+            // Only score binary and multi_select for now (ranking is text currently)
+            if (!q.correct_answer) return;
+            const r = responses?.find(res => res.question_id === q.id);
+            if (!r) return;
+
+            let isCorrect = false;
+
+            if (q.type === 'binary_decision') {
+                // Strict value match ('yes' or 'no')
+                isCorrect = r.answer?.value === q.correct_answer;
+            } else if (q.type === 'multi_select') {
+                // Array match (sort independent)
+                const correct = (q.correct_answer as string[] || []).slice().sort();
+                const actual = (r.answer?.options as string[] || []).slice().sort();
+                isCorrect = JSON.stringify(correct) === JSON.stringify(actual);
+            }
+
+            if (q.correct_answer) totalScorable++; // Count this question
+            if (isCorrect) correctCount++;
+        });
+
+        // Calculate integer percentage (0-100)
+        // If totalScorable is 0, score is null or 0? 0 is safer.
+        const finalScore = totalScorable > 0 ? Math.round((correctCount / totalScorable) * 100) : 0;
+        console.log(`[PlayPage] Calculated Score: ${finalScore}% (${correctCount}/${totalScorable})`);
+
         const { error } = await supabase
             .from('submissions')
-            .update({ completed_at: new Date().toISOString() })
+            .update({
+                completed_at: new Date().toISOString(),
+                score: finalScore
+            })
             .eq('id', sid);
 
         if (error) {

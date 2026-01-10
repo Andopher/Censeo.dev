@@ -90,6 +90,7 @@ export default async function TestDetailPage({ params }: { params: Promise<{ tes
                             <tr>
                                 <th className="p-4">Candidate</th>
                                 <th className="p-4">Status</th>
+                                <th className="p-4">Score</th>
                                 <th className="p-4">Started</th>
                                 <th className="p-4">Time Spent</th>
                                 <th className="p-4"></th>
@@ -121,6 +122,9 @@ export default async function TestDetailPage({ params }: { params: Promise<{ tes
                                             ) : (
                                                 <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">In Progress</span>
                                             )}
+                                        </td>
+                                        <td className="p-4 font-bold text-gray-700">
+                                            {sub.score !== null ? `${sub.score}%` : (isComplete ? '—' : '')}
                                         </td>
                                         <td className="p-4 text-secondary">{timeAgo(sub.started_at)}</td>
                                         <td className="p-4 text-secondary">{duration}</td>

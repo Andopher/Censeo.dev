@@ -1,4 +1,4 @@
-export default async function AuthCodeError() {
+export default async function AuthCodeError({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
     return (
         <main className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
             <div className="max-w-md w-full bg-white p-8 rounded-lg border border-border text-center space-y-4">
@@ -11,6 +11,10 @@ export default async function AuthCodeError() {
                     <li>• An invalid or used code</li>
                     <li>• A network issue</li>
                 </ul>
+                <div className="bg-red-50 p-3 rounded text-xs text-red-800 font-mono break-all">
+                    {/* Error details */}
+                    Error: {(await searchParams).error || 'Unknown error'}
+                </div>
                 <div className="pt-4">
                     <a
                         href="/"

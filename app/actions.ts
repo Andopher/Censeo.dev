@@ -135,6 +135,7 @@ export async function createTest(formData: any) {
         type: q.type,
         prompt: q.prompt,
         constraints: q.constraints || {},
+        correct_answer: q.correctAnswer || null, // Persist correct answer
     }));
 
     const { error: questionsError } = await supabase

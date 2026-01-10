@@ -15,7 +15,9 @@ export async function GET(request: Request) {
 
         if (error) {
             console.error('[Auth Callback] Exchange code error:', error);
-            return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+            const errorUrl = new URL(`${origin}/auth/auth-code-error`);
+            errorUrl.searchParams.set('error', error.message);
+            return NextResponse.redirect(errorUrl);
         }
 
         if (data?.user) {

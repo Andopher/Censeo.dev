@@ -6,7 +6,8 @@ export interface TemplateQuestion {
     order: number;
     type: QuestionType;
     defaultPrompt: string;
-    constraints?: Record<string, any>; // e.g., { options: [], max_select: 2 }
+    constraints?: Record<string, any>;
+    correctAnswer?: any; // strict value for auto-grading
 }
 
 export interface TemplateDef {
@@ -26,17 +27,19 @@ export const TEMPLATES: TemplateDef[] = [
         questions: [
             {
                 order: 1,
-                type: 'forced_ranking',
-                defaultPrompt: 'Rank these interventions by impact on conversion rate. You must prioritize TTI over aesthetics.',
+                type: 'multi_select',
+                defaultPrompt: 'Select the 2 interventions with the highest positive impact on Time to Interactive (TTI).',
                 constraints: {
+                    max_select: 2,
                     options: [
                         'Reduce initial JavaScript bundle by 60%',
                         'Remove the image carousel (save 1.2MB)',
+                        'Prefetch data on hover',
                         'Implement skeleton screens (perceived speed only)',
-                        'Add 3D product viewer (marketing request)',
-                        'Prefetch data on hover'
+                        'Add 3D product viewer (marketing request)'
                     ]
-                }
+                },
+                correctAnswer: ['Reduce initial JavaScript bundle by 60%', 'Remove the image carousel (save 1.2MB)']
             },
             {
                 order: 2,
@@ -45,7 +48,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Yes, build it (Impact: Slower TTI)',
                     no_label: 'No, refuse it (Impact: PM conflict)'
-                }
+                },
+                correctAnswer: 'no'
             },
             {
                 order: 3,
@@ -54,7 +58,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Yes (Skip other QA to finish fallback)',
                     no_label: 'No (Show "Please enable JS" error)'
-                }
+                },
+                correctAnswer: 'yes'
             },
             {
                 order: 4,
@@ -63,14 +68,15 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     max_select: 2,
                     options: [
-                        'Time to Interactive (TTI)',
-                        'Bounce Rate on 3G Networks',
+                        'Time to Interactive (TTI)', // Critical for mobile
+                        'Bounce Rate on 3G Networks', // Critical for mobile
                         'Add-to-Cart Click Latency',
                         'Lighthouse Accessibility Score',
                         'Customer Acquisition Cost',
                         'Total Page Weight'
                     ]
-                }
+                },
+                correctAnswer: ['Time to Interactive (TTI)', 'Bounce Rate on 3G Networks']
             },
             {
                 order: 5,
@@ -87,17 +93,19 @@ export const TEMPLATES: TemplateDef[] = [
         questions: [
             {
                 order: 1,
-                type: 'forced_ranking',
-                defaultPrompt: 'Rank your immediate actions (first = do immediately):',
+                type: 'multi_select',
+                defaultPrompt: 'What is the SINGLE most effective immediate action to stop the bleeding while preserving core functionality?',
                 constraints: {
+                    max_select: 1,
                     options: [
                         'Kill the connection pool (Will drop 100% of current reqs)',
                         'Disable virality feature (Feature flag)',
-                        'Deploy read replica (Takes 15 mins)',
                         'Rate-limit notifications (Code change + deploy)',
+                        'Deploy read replica (Takes 15 mins)',
                         'Ignore and let it stabilize'
                     ]
-                }
+                },
+                correctAnswer: ['Disable virality feature (Feature flag)']
             },
             {
                 order: 2,
@@ -106,7 +114,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Yes (Risk total outage)',
                     no_label: 'No (Risk being fired)'
-                }
+                },
+                correctAnswer: 'no'
             },
             {
                 order: 3,
@@ -115,7 +124,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Ship it (dishonest but stable)',
                     no_label: 'Don\'t ship (honest but broken)'
-                }
+                },
+                correctAnswer: 'no' // Integrity check
             },
             {
                 order: 4,
@@ -124,12 +134,13 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     max_select: 1,
                     options: [
+                        'Fanout-on-write (Storage intensive)', // Best for read-heavy feeds
                         'GraphQL Subscriptions (Complex)',
                         'Fanout-on-read (Compute intensive)',
-                        'Fanout-on-write (Storage intensive)',
                         'Batch processing (High latency)'
                     ]
-                }
+                },
+                correctAnswer: ['Fanout-on-write (Storage intensive)']
             },
             {
                 order: 5,
@@ -138,7 +149,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Yes (I can optimize costs later)',
                     no_label: 'No (Math says $1.8M/month)'
-                }
+                },
+                correctAnswer: 'no'
             }
         ]
     },
@@ -155,7 +167,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Yes, commit to 8 weeks (high risk, high reward)',
                     no_label: 'No, focus on product-market fit with SMBs'
-                }
+                },
+                correctAnswer: 'yes' // Startup logic: take the money
             },
             {
                 order: 2,
@@ -169,13 +182,14 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     max_select: 2,
                     options: [
-                        'Real-time sync engine (WebSockets/CRDTs)',
-                        'SAML SSO integration',
-                        'SOC2 compliance documentation',
-                        'Audit logging system',
-                        'Advanced whiteboard features (for parity)'
+                        'Real-time sync engine (WebSockets/CRDTs)', // Core IP
+                        'Advanced whiteboard features (for parity)', // Core IP
+                        'SAML SSO integration', // Buy
+                        'SOC2 compliance documentation', // Buy/Consultant
+                        'Audit logging system' // Buy/Lib
                     ]
-                }
+                },
+                correctAnswer: ['Real-time sync engine (WebSockets/CRDTs)', 'Advanced whiteboard features (for parity)']
             },
             {
                 order: 4,
@@ -188,11 +202,20 @@ export const TEMPLATES: TemplateDef[] = [
                 defaultPrompt: 'Week 7: You\'re behind schedule. Rank what you\'d cut or compromise (first = first to cut):',
                 constraints: {
                     options: [
+                        'Code quality (accrue tech debt, ship it messy)', // Cut first
+                        'Existing features (remove video chat, comments)',
+                        'SAML SSO (use Google OAuth + manual provisioning)',
                         'SOC2 audit (get the docs, delay the audit)',
-                        'Real-time for 200 users (ship for 100, promise 200 later)',
+                        'Real-time for 200 users (ship for 100, promise 200 later)' // Last resort
+                    ]
+                },
+                correctAnswer: {
+                    value: [
+                        'Code quality (accrue tech debt, ship it messy)',
+                        'SOC2 audit (get the docs, delay the audit)',
                         'SAML SSO (use Google OAuth + manual provisioning)',
                         'Existing features (remove video chat, comments)',
-                        'Code quality (accrue tech debt, ship it messy)'
+                        'Real-time for 200 users (ship for 100, promise 200 later)'
                     ]
                 }
             },
@@ -222,7 +245,8 @@ export const TEMPLATES: TemplateDef[] = [
                         'Hero image size (Root cause)',
                         'Lack of animations'
                     ]
-                }
+                },
+                correctAnswer: ['Mobile form cut off (Functional blocker)', 'Page load 8s (Performance blocker)']
             },
             {
                 order: 2,
@@ -236,7 +260,8 @@ export const TEMPLATES: TemplateDef[] = [
                         'JPEG (Lossy, standard)',
                         'SVG (Vector, unrelated)'
                     ]
-                }
+                },
+                correctAnswer: ['WebP (Modern, high compression)']
             },
             {
                 order: 3,
@@ -245,7 +270,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Allow horizontal scroll (Takes 10 mins)',
                     no_label: 'Redesign as stacked cards (Takes 6 hours)'
-                }
+                },
+                correctAnswer: 'yes' // Pragmatic choice: deadline constraint
             },
             {
                 order: 4,
@@ -254,21 +280,24 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'On Blur (When they leave the field)',
                     no_label: 'On Change (Every keystroke)'
-                }
+                },
+                correctAnswer: 'yes' // Best practice
             },
             {
                 order: 5,
-                type: 'forced_ranking',
-                defaultPrompt: 'Rank these animations by importance (Functional > Delight):',
+                type: 'multi_select',
+                defaultPrompt: 'Select the 2 animations that provide critical system status or feedback (Functional > Delight).',
                 constraints: {
+                    max_select: 2,
                     options: [
                         'Form success confirmation',
+                        'Page load spinner',
                         'Button hover effects',
                         'Smooth scroll',
-                        'Fade-in feature cards',
-                        'Page load spinner'
+                        'Fade-in feature cards'
                     ]
-                }
+                },
+                correctAnswer: ['Form success confirmation', 'Page load spinner']
             }
         ]
     },
@@ -285,7 +314,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: '404 Not Found (Correct resource missing)',
                     no_label: '400 Bad Request (Client error)'
-                }
+                },
+                correctAnswer: 'yes'
             },
             {
                 order: 2,
@@ -299,7 +329,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Add Pagination (Load 50 at a time)',
                     no_label: 'Cache in Redis (Fast but complex)'
-                }
+                },
+                correctAnswer: 'yes' // Pagination is fundamental
             },
             {
                 order: 4,
@@ -308,21 +339,24 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Yes, truncate at 500 chars (Data loss)',
                     no_label: 'No, reject request with 400 error (User friction)'
-                }
+                },
+                correctAnswer: 'no' // Dont truncate w/o telling
             },
             {
                 order: 5,
-                type: 'forced_ranking',
-                defaultPrompt: 'Rank these auth tasks by security priority (first = critical):',
+                type: 'multi_select',
+                defaultPrompt: 'Select the 2 most critical security tasks from this list.',
                 constraints: {
+                    max_select: 2,
                     options: [
                         'Hash passwords (bcrypt)',
                         'Add rate limiting',
-                        'Implement Forgot Password',
                         'Add Google OAuth',
-                        'Build Admin Dashboard'
+                        'Build Admin Dashboard',
+                        'Implement Forgot Password'
                     ]
-                }
+                },
+                correctAnswer: ['Hash passwords (bcrypt)', 'Add rate limiting']
             }
         ]
     },
@@ -339,7 +373,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'On root/page load (Fetch once, global state)',
                     no_label: 'On each recipe (Fetch repeatedly, fresh data)'
-                }
+                },
+                correctAnswer: 'yes' // Minimize requests
             },
             {
                 order: 2,
@@ -348,7 +383,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'IDs only (Small payload, requires N+1 or bulk fetch)',
                     no_label: 'Full Objects (Heavy payload, instant UI)'
-                }
+                },
+                correctAnswer: 'no' // Full objects prevents N+1 (usually)
             },
             {
                 order: 3,
@@ -357,7 +393,8 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Optimistic (Instant UI, risk rollback)',
                     no_label: 'Loading State (Slow UI, guaranteed truth)'
-                }
+                },
+                correctAnswer: 'yes'
             },
             {
                 order: 4,
@@ -366,21 +403,24 @@ export const TEMPLATES: TemplateDef[] = [
                 constraints: {
                     yes_label: 'Debounce (Wait for pause)',
                     no_label: 'Throttle (Limit rate)'
-                }
+                },
+                correctAnswer: 'yes' // Debounce is standard for this
             },
             {
                 order: 5,
-                type: 'forced_ranking',
-                defaultPrompt: 'PM wants features. Rank by impact on retention:',
+                type: 'multi_select',
+                defaultPrompt: 'Select the 2 features likely to have the highest impact on user retention.',
                 constraints: {
+                    max_select: 2,
                     options: [
                         'Add email notifications for new recipes',
-                        'Show "favorited by X people" count',
                         'Add a "My Favorites" page',
-                        'Fix offline un-favoriting bug',
-                        'Folders for favorites'
+                        'Show "favorited by X people" count',
+                        'Folders for favorites',
+                        'Fix offline un-favoriting bug'
                     ]
-                }
+                },
+                correctAnswer: ['Add email notifications for new recipes', 'Add a "My Favorites" page']
             }
         ]
     },

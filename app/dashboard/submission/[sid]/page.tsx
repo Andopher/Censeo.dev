@@ -55,10 +55,18 @@ export default async function SubmissionReviewPage({ params }: { params: Promise
 
                 {/* Main Content: Questions & Answers */}
                 <div className="lg:col-span-2 space-y-8">
-                    <div>
-                        <h2 className="text-secondary text-sm uppercase font-bold">Candidate Submission</h2>
-                        <h1 className="text-3xl font-bold">{submission.candidate_name}</h1>
-                        <p className="text-secondary">{submission.candidate_email}</p>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h2 className="text-secondary text-sm uppercase font-bold">Candidate Submission</h2>
+                            <h1 className="text-3xl font-bold">{submission.candidate_name}</h1>
+                            <p className="text-secondary">{submission.candidate_email}</p>
+                        </div>
+                        {submission.score !== null && (
+                            <div className="text-right bg-white p-4 rounded-lg border border-border shadow-sm">
+                                <div className="text-4xl font-bold text-accent">{submission.score}%</div>
+                                <div className="text-xs text-secondary uppercase tracking-widest font-bold">Score</div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="bg-white p-6 rounded-lg border border-border">
@@ -76,8 +84,50 @@ export default async function SubmissionReviewPage({ params }: { params: Promise
                                         <span className="text-xs font-mono text-secondary">{resp?.time_spent_seconds || 0}s</span>
                                     </div>
                                     <h3 className="font-medium mb-4">{q.prompt}</h3>
-                                    <div className="bg-gray-50 p-4 rounded border border-gray-100">
-                                        {formatAnswer(q, resp)}
+                                    <div className="bg-gray-50 p-4 rounded border border-gray-100 flex justify-between items-start gap-4">
+                                        <div className="flex-1">
+                                            {formatAnswer(q, resp)}
+                                        </div>
+                                        {/* Scoring Badge */}
+                                        {q.correct_answer && (() => {
+                                            const r = resp;
+                                            let isCorrect = false;
+                                            if (q.type === 'binary_decision') isCorrect = r?.answer?.value === q.correct_answer;
+                                            if (q.type === 'multi_select') {
+                                                const c = (q.correct_answer as string[] || []).slice().sort();
+                                                const a = (r?.answer?.options as string[] || []).slice().sort();
+                                                isCorrect = JSON.stringify(c) === JSON.stringify(a);
+                                            }
+
+                                            return (
+                                                <div className="flex flex-col items-end gap-2 min-w-[200px]">
+                                                    {isCorrect ? (
+                                                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold border border-green-200">
+                                                            ✅ Correct
+                                                        </span>
+                                                    ) : (
+                                                        <>
+                                                            <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold border border-red-200">
+                                                                ❌ Incorrect
+                                                            </span>
+                                                            <div className="text-xs text-right text-secondary whitespace-pre-wrap">
+                                                                <span className="font-bold">Correct:</span><br />
+                                                                {q.type === 'forced_ranking' && q.correct_answer?.value
+                                                                    ? q.correct_answer.value.map((v: string, idx: number) => `${idx + 1}. ${v}`).join('\n')
+                                                                    : (Array.isArray(q.correct_answer)
+                                                                        ? q.correct_answer.join(', ')
+                                                                        : (q.type === 'binary_decision'
+                                                                            ? (q.correct_answer === 'yes' ? q.constraints?.yes_label : q.constraints?.no_label)
+                                                                            : q.correct_answer
+                                                                        )
+                                                                    )
+                                                                }
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
                                     </div>
                                 </div>
                             );
