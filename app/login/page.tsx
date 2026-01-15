@@ -1,27 +1,40 @@
 'use client'
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { signUp, signIn } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { GoogleAuthButton } from '@/components/auth/google-button';
 import { Input } from '@/components/ui/input';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 function LoginForm() {
     const router = useRouter();
-    // The searchParams are no longer used to initialize the view in LoginForm
-    // const searchParams = useSearchParams();
-    // const view = searchParams.get('view') || 'login'; // 'login' or 'signup'
-    const [isLogin, setIsLogin] = useState(true); // Default to login
+    const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
+    const [email, setEmail] = useState('');
+
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('rememberedEmail');
+        if (savedEmail) {
+            setEmail(savedEmail);
+            setRememberMe(true);
+        }
+    }, []);
 
     const handleSubmit = async (formData: FormData) => {
         setLoading(true);
         setError('');
         setMessage('');
+
+        const loginEmail = formData.get('email') as string;
+        if (rememberMe) {
+            localStorage.setItem('rememberedEmail', loginEmail);
+        } else {
+            localStorage.removeItem('rememberedEmail');
+        }
 
         // Enforce role for this page
         formData.append('role', 'tester');
@@ -90,12 +103,32 @@ function LoginForm() {
 
                     <div>
                         <label className="text-sm font-medium">Email</label>
-                        <Input name="email" type="email" required placeholder="john@example.com" className="mt-1" />
+                        <Input
+                            name="email"
+                            type="email"
+                            required
+                            placeholder="john@example.com"
+                            className="mt-1"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
                     </div>
 
                     <div>
                         <label className="text-sm font-medium">Password</label>
                         <Input name="password" type="password" required minLength={6} className="mt-1" />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                            />
+                            <span className="text-sm text-gray-600">Remember me</span>
+                        </label>
                     </div>
 
                     <Button type="submit" className="w-full" disabled={loading}>

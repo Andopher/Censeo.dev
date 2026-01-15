@@ -15,12 +15,12 @@ export function CodeEditor({ className, ...props }: CodeEditorProps) {
     }
 
     return (
-        <div className={cn("relative min-h-[500px] w-full overflow-hidden rounded-md border border-border bg-white", className)}>
+        <div className={cn("relative min-h-[500px] w-full overflow-hidden border-none bg-[#1e1e1e]", className)}>
             <Editor
                 height="100%"
                 defaultLanguage="python"
                 defaultValue="# Write your python code here"
-                theme="light"
+                theme="vs-dark"
                 options={{
                     minimap: { enabled: false },
                     fontSize: 14,

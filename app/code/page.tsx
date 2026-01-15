@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 import { CodeEditor } from "@/components/code-editor"
 import type { TerminalRef } from "@/components/terminal"
 
@@ -180,6 +181,23 @@ export default function CodePage() {
         }
     }
 
+    const reloadFilesFromWorkspace = async () => {
+        try {
+            const response = await fetch("http://localhost:4000/api/list-workspace-files");
+            if (!response.ok) return;
+
+            const { files: workspaceFiles } = await response.json();
+
+            // Update files with content from workspace
+            setFiles(prev => prev.map(f => {
+                const wsFile = workspaceFiles.find((wf: any) => wf.name === f.name);
+                return wsFile ? { ...f, content: wsFile.content } : f;
+            }));
+        } catch (error) {
+            console.error("Failed to reload files from workspace:", error);
+        }
+    }
+
     // File Management
     const getActiveContent = () => files.find(f => f.name === activeFile)?.content || ""
 
@@ -201,67 +219,86 @@ export default function CodePage() {
     }
 
     return (
-        <div className="container mx-auto flex min-h-screen flex-col gap-6 p-4 md:p-10">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Technical Assessment</h1>
-                <p className="text-secondary">
-                    Complete the coding challenge below. You can run your code to test it.
-                </p>
-            </div>
+        <div className="flex min-h-screen flex-col bg-[#F9F9F6]">
+            {/* Site Header / Logo */}
+            <nav className="p-4 flex justify-between items-center max-w-[1600px] w-full mx-auto">
+                <Link href="/" className="text-xl font-bold tracking-tight text-foreground">Censeo</Link>
+                <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-end">
+                        <h1 className="text-sm font-bold tracking-tight text-foreground">Technical Assessment</h1>
+                        <p className="text-[10px] text-secondary uppercase tracking-wider font-medium">
+                            Python Engineering Judgment
+                        </p>
+                    </div>
+                </div>
+            </nav>
 
-            <div className="grid gap-6 lg:grid-cols-[1fr_300px_350px]">
-                {/* Main Content Area: Editor + Explorer */}
-                <div className="flex flex-col gap-6">
-                    <Card className="flex flex-1 flex-col overflow-hidden border-border bg-white shadow-sm h-[500px]">
-                        <div className="flex h-full">
-                            {/* File Explorer Sidebar */}
-                            <div className="w-56 h-full border-r border-border">
-                                <FileExplorer
-                                    files={files}
-                                    activeFile={activeFile}
-                                    onSelectFile={setActiveFile}
-                                    onCreateFile={handleCreateFile}
-                                    onDeleteFile={handleDeleteFile}
-                                />
-                            </div>
+            <div className="flex-1 flex flex-col p-4 pt-0 max-w-[1600px] w-full mx-auto">
+                {/* Unified IDE Container */}
+                <div className="flex flex-col rounded-2xl overflow-hidden border border-border shadow-2xl shadow-black/5 bg-[#1e1e1e]">
+                    {/* Top Row: Editor + AI Chat */}
+                    <div className="grid lg:grid-cols-[1fr_400px]">
+                        {/* Main Content Area: Editor + Explorer */}
+                        <div className="flex flex-col">
+                            <Card className="flex flex-1 flex-col overflow-hidden border-none rounded-none bg-[#1e1e1e] h-[500px] shadow-none">
+                                <div className="flex h-full">
+                                    {/* File Explorer Sidebar */}
+                                    <div className="w-56 h-full border-r border-border">
+                                        <FileExplorer
+                                            files={files}
+                                            activeFile={activeFile}
+                                            onSelectFile={setActiveFile}
+                                            onCreateFile={handleCreateFile}
+                                            onDeleteFile={handleDeleteFile}
+                                        />
+                                    </div>
 
-                            {/* Editor Area */}
-                            <div className="flex-1 flex flex-col min-w-0">
-                                <div className="flex items-center justify-between border-b border-border bg-gray-50/50 p-4 h-14">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium text-secondary">{activeFile}</span>
+                                    {/* Editor Area */}
+                                    <div className="flex-1 flex flex-col min-w-0">
+                                        <div className="flex items-center justify-between border-b border-border bg-[#252525] p-4 h-14">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{activeFile}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 relative">
+                                            <CodeEditor
+                                                className="absolute inset-0 border-none rounded-none"
+                                                value={getActiveContent()}
+                                                onChange={(value) => updateActiveContent(value || "")}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex-1 relative">
-                                    <CodeEditor
-                                        className="absolute inset-0 border-none rounded-none"
-                                        value={getActiveContent()}
-                                        onChange={(value) => updateActiveContent(value || "")}
-                                    />
-                                </div>
-                            </div>
+                            </Card>
                         </div>
-                    </Card>
-                </div>
 
-                {/* Center Column: Terminal + Instructions */}
-                <div className="flex flex-col gap-6">
-                    {/* Bottom Terminal */}
-                    <Card className="overflow-hidden flex flex-col h-[500px] border border-border shadow-sm">
-                        <CardHeader className="py-2 px-4 border-b border-border bg-gray-50/50 min-h-[40px] flex justify-center">
-                            <CardTitle className="text-xs font-medium text-secondary uppercase tracking-widest">Local Terminal (WS)</CardTitle>
+                        {/* Right Sidebar: AI Chat */}
+                        <div className="flex flex-col h-[500px]">
+                            <AiChat files={files} className="h-full shadow-sm border border-border" onFilesChanged={reloadFilesFromWorkspace} />
+                        </div>
+                    </div>
+
+                    {/* Bottom Row: Terminal */}
+                    <Card className="overflow-hidden flex flex-col h-[350px] border-t border-border border-b-0 border-x-0 rounded-none bg-[#1e1e1e] shadow-none">
+                        <CardHeader className="py-2 px-4 border-b border-border bg-[#252525] min-h-[40px] flex flex-row items-center justify-between space-y-0">
+                            <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Local Terminal (WS)</CardTitle>
+                            <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" onClick={handleRun} disabled={isRunning} className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/10">
+                                    {isRunning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Play className="h-3 w-3 mr-1" />}
+                                    Run
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={handleReset} className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/10">
+                                    <RefreshCw className="h-3 w-3 mr-1" />
+                                    Reset
+                                </Button>
+                            </div>
                         </CardHeader>
-                        <CardContent className="flex-1 p-0 bg-white border-none relative">
+                        <CardContent className="flex-1 p-0 bg-[#1e1e1e] border-none relative">
                             <div className="absolute inset-0">
                                 <SocketTerminal />
                             </div>
                         </CardContent>
                     </Card>
-                </div>
-
-                {/* Right Sidebar: AI Chat */}
-                <div className="flex flex-col h-[500px]">
-                    <AiChat files={files} className="h-full shadow-sm border border-border" />
                 </div>
             </div>
         </div>

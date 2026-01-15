@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface Message {
     role: "user" | "assistant"
@@ -16,9 +18,10 @@ interface Message {
 interface AiChatProps {
     files: { name: string; content: string }[]
     className?: string
+    onFilesChanged?: () => void
 }
 
-export function AiChat({ files, className }: AiChatProps) {
+export function AiChat({ files, className, onFilesChanged }: AiChatProps) {
     const [messages, setMessages] = useState<Message[]>([
         { role: "assistant", content: "Hello! I'm your AI coding assistant. I can see your files. How can I help you?" }
     ])
@@ -77,6 +80,11 @@ export function AiChat({ files, className }: AiChatProps) {
                 })
             }
 
+            // Reload files after AI response completes
+            if (onFilesChanged) {
+                onFilesChanged()
+            }
+
         } catch (error) {
             console.error(error)
             setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I ran into an error connecting to the AI backend." }])
@@ -86,10 +94,10 @@ export function AiChat({ files, className }: AiChatProps) {
     }
 
     return (
-        <Card className={cn("flex flex-col h-full border-l rounded-none", className)}>
-            <CardHeader className="py-3 px-4 border-b bg-muted/30">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-primary" />
+        <Card className={cn("flex flex-col h-full border-l border-border rounded-none bg-[#1e1e1e] shadow-none", className)}>
+            <CardHeader className="py-3 px-4 border-b border-border bg-[#252525]">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-gray-200">
+                    <Bot className="w-4 h-4 text-blue-400" />
                     AI Assistant
                 </CardTitle>
             </CardHeader>
@@ -100,15 +108,21 @@ export function AiChat({ files, className }: AiChatProps) {
                             <div key={i} className={cn("flex gap-3", m.role === "assistant" ? "" : "flex-row-reverse")}>
                                 <div className={cn(
                                     "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                                    m.role === "assistant" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                                    m.role === "assistant" ? "bg-blue-500/10 text-blue-400" : "bg-[#333333] text-gray-400"
                                 )}>
                                     {m.role === "assistant" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
                                 </div>
                                 <div className={cn(
                                     "rounded-lg p-3 text-sm max-w-[85%]",
-                                    m.role === "assistant" ? "bg-muted/30 text-foreground" : "bg-primary text-primary-foreground"
+                                    m.role === "assistant" ? "bg-[#252525] text-gray-200 prose prose-invert prose-sm max-w-none" : "bg-blue-600 text-white"
                                 )}>
-                                    {m.content}
+                                    {m.role === "assistant" ? (
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {m.content}
+                                        </ReactMarkdown>
+                                    ) : (
+                                        m.content
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -126,16 +140,16 @@ export function AiChat({ files, className }: AiChatProps) {
                     </div>
                 </ScrollArea>
             </CardContent>
-            <CardFooter className="p-4 border-t bg-background">
+            <CardFooter className="p-4 border-t border-border bg-[#1e1e1e]">
                 <form onSubmit={handleSubmit} className="flex gap-2 w-full">
                     <Input
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         placeholder="Ask about your code..."
-                        className="flex-1"
+                        className="flex-1 bg-[#2d2d2d] border-border text-gray-200 placeholder:text-gray-500"
                         disabled={isLoading}
                     />
-                    <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+                    <Button type="submit" size="icon" disabled={isLoading || !input.trim()} className="bg-blue-600 hover:bg-blue-700">
                         <Send className="w-4 h-4" />
                     </Button>
                 </form>

@@ -27,26 +27,55 @@ export const SocketTerminal = React.forwardRef<any, SocketTerminalProps>(({ sock
                 cursorBlink: true,
                 fontSize: 14,
                 fontFamily: "'Fira Code', monospace",
+                convertEol: false, // Let the shell handle CRLF
                 theme: {
-                    background: "#ffffff",
-                    foreground: "#000000",
-                    cursor: "#333333",
-                    selectionBackground: "#e2e8f0",
+                    background: "#1e1e1e",
+                    foreground: "#cccccc",
+                    cursor: "#ffffff",
+                    selectionBackground: "#333333",
+                    black: "#000000",
+                    red: "#cd3131",
+                    green: "#0dbc79",
+                    yellow: "#e5e510",
+                    blue: "#2472c8",
+                    magenta: "#bc3fbc",
+                    cyan: "#11a8cd",
+                    white: "#e5e5e5",
+                    brightBlack: "#666666",
+                    brightRed: "#f14c4c",
+                    brightGreen: "#23d18b",
+                    brightYellow: "#f5f543",
+                    brightBlue: "#3b8eea",
+                    brightMagenta: "#d670d6",
+                    brightCyan: "#29b8db",
+                    brightWhite: "#e5e5e5"
                 },
-                rows: 20,
+                rows: 30,
+                scrollback: 5000,
             })
 
             fitAddon = new FitAddon()
             term.loadAddon(fitAddon)
             term.open(containerRef.current)
 
-            // Fit adjustment
-            setTimeout(() => {
-                try { fitAddon.fit() } catch (e) { console.warn(e) }
-            }, 100)
+            // Fit adjustment before connecting
+            try {
+                fitAddon.fit()
+            } catch (e) { console.warn("Initial fit failed", e) }
 
-            // Connect to WebSocket
-            const ws = new WebSocket(socketUrl)
+            const { cols: initialCols, rows: initialRows } = term
+            const connectionUrl = `${socketUrl}?cols=${initialCols}&rows=${initialRows}`
+
+            // Function to sync size to backend during session
+            const syncSize = () => {
+                if (socketRef.current?.readyState === WebSocket.OPEN) {
+                    const { cols, rows } = term
+                    socketRef.current.send(JSON.stringify({ type: 'resize', cols, rows }))
+                }
+            }
+
+            // Connect to WebSocket with initial dimensions
+            const ws = new WebSocket(connectionUrl)
             socketRef.current = ws
 
             ws.onopen = () => {
@@ -54,7 +83,7 @@ export const SocketTerminal = React.forwardRef<any, SocketTerminalProps>(({ sock
                 term.writeln("\x1b[90m> Spawning shell...\x1b[0m\r\n")
             }
 
-            ws.onmessage = (event) => {
+            ws.onmessage = (event: any) => {
                 term.write(event.data)
             }
 
@@ -74,14 +103,23 @@ export const SocketTerminal = React.forwardRef<any, SocketTerminalProps>(({ sock
             })
 
             terminalRef.current = term
+
+            // Handle terminal resizes from FitAddon
+            term.onResize((size: { cols: number, rows: number }) => {
+                if (socketRef.current?.readyState === WebSocket.OPEN) {
+                    socketRef.current.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }))
+                }
+            })
         }
 
         initTerminal()
 
         // Resize handler
         const handleResize = () => {
-            if (fitAddon) {
-                try { fitAddon.fit() } catch (e) { }
+            if (fitAddon && term) {
+                try {
+                    fitAddon.fit()
+                } catch (e) { }
             }
         }
         window.addEventListener("resize", handleResize)
@@ -95,6 +133,10 @@ export const SocketTerminal = React.forwardRef<any, SocketTerminalProps>(({ sock
         }
     }, [socketUrl])
 
-    return <div ref={containerRef} className="h-full w-full pl-2 pt-2 bg-white" />
+    return (
+        <div className="h-full w-full bg-[#1e1e1e] overflow-hidden p-2">
+            <div ref={containerRef} className="h-full w-full" />
+        </div>
+    )
 })
 SocketTerminal.displayName = "SocketTerminal"

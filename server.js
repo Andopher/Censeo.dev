@@ -1,123 +1,246 @@
-const express = require('express');
-const http = require('http');
-const WebSocket = require('ws');
-const pty = require('node-pty');
-const os = require('os');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config();
+const express = require("express");
+const http = require("http");
+const WebSocket = require("ws");
+const pty = require("node-pty");
+const os = require("os");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+const fs = require("fs");
+const fsp = require("fs/promises");
+const path = require("path");
+require("dotenv").config();
 
-const { OpenAI } = require("openai");
+const OpenAI = require("openai").default;
+const { Agent, run, tool } = require("@openai/agents");
+const { z } = require("zod");
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const WORKSPACE_DIR = path.join(__dirname, 'temp-workspace');
+const WORKSPACE_DIR = path.join(__dirname, "temp-workspace");
 if (!fs.existsSync(WORKSPACE_DIR)) {
-    fs.mkdirSync(WORKSPACE_DIR);
+    fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
 }
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// --- OpenAI Setup ---
+/* ---------------- OpenAI Client ---------------- */
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Sync Files Endpoint
-app.post('/api/save-files', (req, res) => {
+/* ---------------- Agent Tools ---------------- */
+
+const readFileTool = tool({
+    name: "read_file",
+    description: "Read a file from the workspace",
+    parameters: z.object({
+        path: z.string(),
+    }),
+    async execute({ path: filePath }) {
+        const fullPath = filePath.startsWith("/")
+            ? filePath
+            : path.join(WORKSPACE_DIR, filePath);
+
+        return await fsp.readFile(fullPath, "utf8");
+    },
+});
+
+const writeFileTool = tool({
+    name: "write_file",
+    description: "Write or overwrite a file in the workspace",
+    parameters: z.object({
+        path: z.string(),
+        contents: z.string(),
+    }),
+    async execute({ path: filePath, contents }) {
+        const fullPath = filePath.startsWith("/")
+            ? filePath
+            : path.join(WORKSPACE_DIR, filePath);
+
+        await fsp.mkdir(path.dirname(fullPath), { recursive: true });
+        await fsp.writeFile(fullPath, contents, "utf8");
+
+        return "ok";
+    },
+});
+
+const listFilesTool = tool({
+    name: "list_files",
+    description: "List all files in the workspace",
+    parameters: z.object({}),
+    async execute() {
+        const walk = async (dir, base = "") => {
+            const entries = await fsp.readdir(dir, { withFileTypes: true });
+            let files = [];
+            for (const e of entries) {
+                const rel = path.join(base, e.name);
+                const abs = path.join(dir, e.name);
+                if (e.isDirectory()) {
+                    files = files.concat(await walk(abs, rel));
+                } else {
+                    files.push(rel);
+                }
+            }
+            return files;
+        };
+        return await walk(WORKSPACE_DIR);
+    },
+});
+
+/* ---------------- Agent ---------------- */
+
+const ideAgent = new Agent({
+    name: "IDE Agent",
+    model: "gpt-5.2",
+    instructions: `
+You are an expert software engineer operating inside a real codebase.
+
+Rules:
+- Never assume file contents.
+- Always read files before modifying them.
+- Use list_files to discover structure.
+- Make minimal, correct changes.
+- Explain changes briefly at the end.
+`,
+    tools: [readFileTool, writeFileTool, listFilesTool],
+});
+
+/* ---------------- API: Save Files ---------------- */
+
+app.post("/api/save-files", async (req, res) => {
     const { files } = req.body;
 
-    if (files && Array.isArray(files)) {
-        files.forEach(file => {
-            const filePath = path.join(WORKSPACE_DIR, file.name);
-            fs.writeFileSync(filePath, file.content);
-        });
-        console.log(`Synced ${files.length} files to workspace.`);
-        res.status(200).send({ message: "Files synced" });
-    } else {
-        res.status(400).send({ error: "Invalid files format" });
+    if (!Array.isArray(files)) {
+        return res.status(400).json({ error: "Invalid files format" });
+    }
+
+    for (const file of files) {
+        const filePath = path.join(WORKSPACE_DIR, file.name);
+        await fsp.mkdir(path.dirname(filePath), { recursive: true });
+        await fsp.writeFile(filePath, file.content, "utf8");
+    }
+
+    res.json({ message: `Synced ${files.length} files` });
+});
+
+/* ---------------- API: List Workspace Files ---------------- */
+
+app.get("/api/list-workspace-files", async (req, res) => {
+    try {
+        const walk = async (dir, base = "") => {
+            const entries = await fsp.readdir(dir, { withFileTypes: true });
+            let files = [];
+            for (const e of entries) {
+                const rel = path.join(base, e.name);
+                const abs = path.join(dir, e.name);
+                if (e.isDirectory()) {
+                    files = files.concat(await walk(abs, rel));
+                } else {
+                    const content = await fsp.readFile(abs, "utf8");
+                    files.push({ name: rel, content });
+                }
+            }
+            return files;
+        };
+        const files = await walk(WORKSPACE_DIR);
+        res.json({ files });
+    } catch (error) {
+        console.error("Error listing workspace files:", error);
+        res.status(500).json({ error: "Failed to list files" });
     }
 });
 
-app.post('/api/chat', async (req, res) => {
+/* ---------------- API: Chat ---------------- */
+
+app.post("/api/chat", async (req, res) => {
     try {
-        const { messages, files } = req.body;
+        const { messages } = req.body;
+        console.log(`[DEBUG] Received ${messages?.length} messages`);
+        console.log(`[DEBUG] Messages:`, JSON.stringify(messages, null, 2));
 
-        // Construct System Prompt with File Context
-        let systemPrompt = "You are an expert coding assistant embedded in a Cloud IDE.\n";
-        systemPrompt += "You have access to the user's current codebase files below:\n\n";
+        res.setHeader("Content-Type", "text/plain");
+        res.setHeader("Transfer-Encoding", "chunked");
 
-        if (files && Array.isArray(files)) {
-            files.forEach(file => {
-                systemPrompt += `--- FILE: ${file.name} ---\n`;
-                systemPrompt += `${file.content}\n\n`;
-            });
-        }
+        const userMessage = messages.map(m => m.content).join("\n");
+        console.log(`[DEBUG] User message: ${userMessage}`);
 
-        systemPrompt += "Answer the user's questions based on this code. Be concise and technical.";
+        const stream = await run(
+            ideAgent,
+            userMessage,
+            { stream: true }
+        );
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-5.1-mini",
-            messages: [
-                { role: "system", content: systemPrompt },
-                ...messages
-            ],
-            stream: true,
-        });
+        console.log(`[DEBUG] Stream created, iterating...`);
+        let eventCount = 0;
 
-        // Set headers for SSE (Server-Sent Events) or just raw stream
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Transfer-Encoding', 'chunked');
+        for await (const event of stream) {
+            eventCount++;
 
-        for await (const chunk of completion) {
-            const content = chunk.choices[0]?.delta?.content || "";
-            if (content) {
-                res.write(content);
+            // Extract delta from nested structure
+            let delta = null;
+            if (event.type === "raw_model_stream_event" && event.data?.type === "output_text_delta") {
+                delta = event.data.delta;
+            } else if (event.type === "output_text.delta" && event.delta) {
+                delta = event.delta;
+            }
+
+            if (delta) {
+                res.write(delta);
             }
         }
-        res.end();
 
-    } catch (error) {
-        console.error("OpenAI Error:", error);
-        res.status(500).send("Error generating response");
+        console.log(`[DEBUG] Stream finished. Total events: ${eventCount}`);
+        res.end();
+    } catch (err) {
+        console.error("[ERROR] Agent error:", err);
+        res.status(500).send("Agent error");
     }
 });
 
-const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
+/* ---------------- Terminal ---------------- */
 
-wss.on('connection', (ws) => {
-    console.log("Client connected to terminal");
+const shell = os.platform() === "win32" ? "powershell.exe" : "bash";
+
+wss.on("connection", (ws, req) => {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const cols = parseInt(url.searchParams.get("cols")) || 80;
+    const rows = parseInt(url.searchParams.get("rows")) || 30;
 
     const ptyProcess = pty.spawn(shell, [], {
-        name: 'xterm-color',
-        cols: 80,
-        rows: 30,
-        cwd: WORKSPACE_DIR, // Spawn in the synced workspace
-        env: process.env
+        name: "xterm-256color",
+        cols,
+        rows,
+        cwd: WORKSPACE_DIR,
+        env: {
+            ...process.env,
+            TERM: "xterm-256color",
+            COLORTERM: "truecolor",
+        },
     });
 
-    // Send terminal output to websocket
-    ptyProcess.on('data', (data) => {
-        ws.send(data);
+    ptyProcess.on("data", data => ws.send(data));
+
+    ws.on("message", msg => {
+        try {
+            const parsed = JSON.parse(msg.toString());
+            if (parsed.type === "resize") {
+                ptyProcess.resize(parsed.cols, parsed.rows);
+                return;
+            }
+        } catch { }
+        ptyProcess.write(msg);
     });
 
-    // Receive data from websocket and write to terminal
-    ws.on('message', (message) => {
-        ptyProcess.write(message);
-    });
-
-    ws.on('close', () => {
-        console.log("Client disconnected");
-        ptyProcess.kill();
-    });
+    ws.on("close", () => ptyProcess.kill());
 });
+
+/* ---------------- Server ---------------- */
 
 const PORT = 4000;
 server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Backend server functionality (Terminal + AI) running on http://localhost:${PORT}`);
+    console.log(`IDE backend running on http://localhost:${PORT}`);
 });

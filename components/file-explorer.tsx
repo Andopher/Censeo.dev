@@ -40,27 +40,27 @@ export function FileExplorer({
     }
 
     return (
-        <div className="flex flex-col h-full border-r border-border bg-gray-50/50">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-                <span className="text-sm font-medium text-secondary">Explorer</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsCreating(true)}>
+        <div className="flex flex-col h-full border-r border-border bg-[#1e1e1e]">
+            <div className="flex items-center justify-between p-4 border-b border-border bg-[#252525]">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Explorer</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white hover:bg-white/10" onClick={() => setIsCreating(true)}>
                     <Plus className="h-4 w-4" />
                 </Button>
             </div>
 
             <ScrollArea className="flex-1">
-                <div className="flex flex-col gap-1 p-2">
+                <div className="flex flex-col gap-px p-1">
                     {files.map((file) => (
                         <div
                             key={file.name}
-                            className={`group flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer ${activeFile === file.name
-                                    ? "bg-gray-200 text-foreground font-medium"
-                                    : "text-secondary hover:bg-gray-100 hover:text-foreground"
+                            className={`group flex items-center justify-between rounded-none px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeFile === file.name
+                                ? "bg-[#2d2d2d] text-white font-medium shadow-sm"
+                                : "text-gray-400 hover:bg-[#2d2d2d]/50 hover:text-gray-200"
                                 }`}
                             onClick={() => onSelectFile(file.name)}
                         >
                             <div className="flex items-center gap-2 overflow-hidden">
-                                <FileCode2 className={`h-4 w-4 ${activeFile === file.name ? "text-blue-500" : "text-gray-400"
+                                <FileCode2 className={`h-4 w-4 ${activeFile === file.name ? "text-blue-400" : "text-gray-500"
                                     }`} />
                                 <span className="truncate">{file.name}</span>
                             </div>
