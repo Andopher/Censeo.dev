@@ -41,7 +41,7 @@ export function FileExplorer({
 
     return (
         <div className="flex flex-col h-full border-r border-border bg-[#1e1e1e]">
-            <div className="flex items-center justify-between p-4 border-b border-border bg-[#252525]">
+            <div className="flex items-center justify-between p-4 border-b border-border bg-[#252525] h-14">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Explorer</span>
                 <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white hover:bg-white/10" onClick={() => setIsCreating(true)}>
                     <Plus className="h-4 w-4" />

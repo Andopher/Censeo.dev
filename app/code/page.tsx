@@ -279,7 +279,7 @@ export default function CodePage() {
                     </div>
 
                     {/* Bottom Row: Terminal */}
-                    <Card className="overflow-hidden flex flex-col h-[350px] border-t border-border border-b-0 border-x-0 rounded-none bg-[#1e1e1e] shadow-none">
+                    <Card className="overflow-hidden flex flex-col h-[280px] border-t border-border border-b-0 border-x-0 rounded-none bg-[#1e1e1e] shadow-none">
                         <CardHeader className="py-2 px-4 border-b border-border bg-[#252525] min-h-[40px] flex flex-row items-center justify-between space-y-0">
                             <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Local Terminal (WS)</CardTitle>
                             <div className="flex items-center gap-2">

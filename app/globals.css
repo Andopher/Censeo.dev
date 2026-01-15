@@ -47,3 +47,22 @@ body {
 .xterm-viewport::-webkit-scrollbar {
   width: 10px;
 }
+
+/* Code block styling - Windows PowerShell font */
+code, pre, .prose code, .prose pre {
+  font-family: 'Consolas', 'Courier New', monospace !important;
+}
+
+/* Ensure inline code has proper styling */
+.prose :where(code):not(:where([class~="not-prose"] *)) {
+  font-family: 'Consolas', 'Courier New', monospace !important;
+}
+
+/* Ensure pre code blocks have proper styling */
+.prose :where(pre):not(:where([class~="not-prose"] *)) {
+  font-family: 'Consolas', 'Courier New', monospace !important;
+}
+
+.prose :where(pre code):not(:where([class~="not-prose"] *)) {
+  font-family: 'Consolas', 'Courier New', monospace !important;
+}

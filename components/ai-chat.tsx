@@ -23,7 +23,7 @@ interface AiChatProps {
 
 export function AiChat({ files, className, onFilesChanged }: AiChatProps) {
     const [messages, setMessages] = useState<Message[]>([
-        { role: "assistant", content: "Hello! I'm your AI coding assistant. I can see your files. How can I help you?" }
+        { role: "assistant", content: "Hello! I'm Codex, your AI coding assistant. I can see your files. How can I help you?" }
     ])
     const [input, setInput] = useState("")
     const [isLoading, setIsLoading] = useState(false)
@@ -95,10 +95,10 @@ export function AiChat({ files, className, onFilesChanged }: AiChatProps) {
 
     return (
         <Card className={cn("flex flex-col h-full border-l border-border rounded-none bg-[#1e1e1e] shadow-none", className)}>
-            <CardHeader className="py-3 px-4 border-b border-border bg-[#252525]">
-                <CardTitle className="text-sm font-medium flex items-center gap-2 text-gray-200">
+            <CardHeader className="p-4 border-b border-border bg-[#252525] h-14">
+                <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                     <Bot className="w-4 h-4 text-blue-400" />
-                    AI Assistant
+                    Codex
                 </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden relative">
