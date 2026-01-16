@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { parseDiffSuggestion, type FileDiff } from "@/lib/diff-parser"
 
 interface Message {
     role: "user" | "assistant"
@@ -19,9 +20,10 @@ interface AiChatProps {
     files: { name: string; content: string }[]
     className?: string
     onFilesChanged?: () => void
+    onDiffsDetected?: (diffs: FileDiff[]) => void
 }
 
-export function AiChat({ files, className, onFilesChanged }: AiChatProps) {
+export function AiChat({ files, className, onFilesChanged, onDiffsDetected }: AiChatProps) {
     const [messages, setMessages] = useState<Message[]>([
         { role: "assistant", content: "Hello! I'm Codex, your AI coding assistant. I can see your files. How can I help you?" }
     ])
@@ -59,10 +61,11 @@ export function AiChat({ files, className, onFilesChanged }: AiChatProps) {
             if (!response.ok) throw new Error("Failed to fetch response")
             if (!response.body) throw new Error("No response body")
 
-            // Stream handling
+            // Stream handling - now expects JSON events
             const reader = response.body.getReader()
             const decoder = new TextDecoder()
             let assistantMessage: Message = { role: "assistant", content: "" }
+            let buffer = ""
 
             setMessages(prev => [...prev, assistantMessage])
 
@@ -71,18 +74,118 @@ export function AiChat({ files, className, onFilesChanged }: AiChatProps) {
                 if (done) break
 
                 const chunk = decoder.decode(value)
-                assistantMessage = { ...assistantMessage, content: assistantMessage.content + chunk }
+                buffer += chunk
 
-                setMessages(prev => {
-                    const newMessages = [...prev]
-                    newMessages[newMessages.length - 1] = assistantMessage
-                    return newMessages
-                })
-            }
+                // Process complete JSON lines
+                const lines = buffer.split('\n')
+                buffer = lines.pop() || "" // Keep incomplete line in buffer
 
-            // Reload files after AI response completes
-            if (onFilesChanged) {
-                onFilesChanged()
+                for (const line of lines) {
+                    if (!line.trim()) continue
+
+                    try {
+                        const event = JSON.parse(line)
+
+                        // Handle different event types
+                        switch (event.type) {
+                            case "model_output":
+                                // Accumulate model output for display
+                                assistantMessage = {
+                                    ...assistantMessage,
+                                    content: assistantMessage.content + event.delta
+                                }
+                                setMessages(prev => {
+                                    const newMessages = [...prev]
+                                    newMessages[newMessages.length - 1] = assistantMessage
+                                    return newMessages
+                                })
+                                break
+
+                            case "validating_patches":
+                                console.log(`[AI] Validating ${event.count} patches...`)
+                                break
+
+                            case "planning_started":
+                                console.log(`[AI] Planning phase started...`)
+                                assistantMessage = {
+                                    ...assistantMessage,
+                                    content: assistantMessage.content + "\n\n🧠 Planning..."
+                                }
+                                setMessages(prev => {
+                                    const newMessages = [...prev]
+                                    newMessages[newMessages.length - 1] = assistantMessage
+                                    return newMessages
+                                })
+                                break
+
+                            case "plan_created":
+                                console.log(`[AI] Plan created:`, event.plan)
+                                assistantMessage = {
+                                    ...assistantMessage,
+                                    content: assistantMessage.content + `\n\n📋 Plan:\n- Files: ${event.plan.files_to_modify.join(', ')}\n- ${event.plan.rationale}\n\n⚙️ Executing...`
+                                }
+                                setMessages(prev => {
+                                    const newMessages = [...prev]
+                                    newMessages[newMessages.length - 1] = assistantMessage
+                                    return newMessages
+                                })
+                                break
+
+                            case "applying_patch":
+                                console.log(`[AI] Applying patch to ${event.path} (${event.operation})`)
+                                break
+
+                            case "done":
+                                console.log(`[AI] ${event.summary}`)
+                                // Reload files after patches applied
+                                if (onFilesChanged) {
+                                    onFilesChanged()
+                                }
+                                break
+
+                            case "validation_failed":
+                                console.error(`[AI] Validation failed:`, event.errors)
+                                assistantMessage = {
+                                    ...assistantMessage,
+                                    content: assistantMessage.content + `\n\n❌ Validation failed:\n${event.errors.join('\n')}`
+                                }
+                                setMessages(prev => {
+                                    const newMessages = [...prev]
+                                    newMessages[newMessages.length - 1] = assistantMessage
+                                    return newMessages
+                                })
+                                break
+
+                            case "patch_failed":
+                                console.error(`[AI] Patch failed:`, event.errors)
+                                assistantMessage = {
+                                    ...assistantMessage,
+                                    content: assistantMessage.content + `\n\n❌ Patch failed:\n${event.errors.join('\n')}`
+                                }
+                                setMessages(prev => {
+                                    const newMessages = [...prev]
+                                    newMessages[newMessages.length - 1] = assistantMessage
+                                    return newMessages
+                                })
+                                break
+
+                            case "error":
+                                console.error(`[AI] Error:`, event.message)
+                                assistantMessage = {
+                                    ...assistantMessage,
+                                    content: assistantMessage.content + `\n\n❌ Error: ${event.message}`
+                                }
+                                setMessages(prev => {
+                                    const newMessages = [...prev]
+                                    newMessages[newMessages.length - 1] = assistantMessage
+                                    return newMessages
+                                })
+                                break
+                        }
+                    } catch (parseError) {
+                        console.error("Failed to parse event:", line, parseError)
+                    }
+                }
             }
 
         } catch (error) {
@@ -94,7 +197,7 @@ export function AiChat({ files, className, onFilesChanged }: AiChatProps) {
     }
 
     return (
-        <Card className={cn("flex flex-col h-full border-l border-border rounded-none bg-[#1e1e1e] shadow-none", className)}>
+        <Card className={cn("flex flex-col h-full rounded-none bg-[#1e1e1e] shadow-none border-0", className)}>
             <CardHeader className="p-4 border-b border-border bg-[#252525] h-14">
                 <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                     <Bot className="w-4 h-4 text-blue-400" />
@@ -113,8 +216,8 @@ export function AiChat({ files, className, onFilesChanged }: AiChatProps) {
                                     {m.role === "assistant" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
                                 </div>
                                 <div className={cn(
-                                    "rounded-lg p-3 text-sm max-w-[85%]",
-                                    m.role === "assistant" ? "bg-[#252525] text-gray-200 prose prose-invert prose-sm max-w-none" : "bg-blue-600 text-white"
+                                    "rounded-lg p-3 text-sm break-words",
+                                    m.role === "assistant" ? "bg-[#252525] text-gray-200 prose prose-invert prose-sm max-w-none" : "bg-blue-600 text-white max-w-[85%]"
                                 )}>
                                     {m.role === "assistant" ? (
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>

@@ -18,6 +18,14 @@ const AiChat = dynamic(
     () => import("@/components/ai-chat").then((mod) => mod.AiChat),
     { ssr: false }
 )
+const DiffReviewPanel = dynamic(
+    () => import("@/components/diff-review-panel").then((mod) => mod.DiffReviewPanel),
+    { ssr: false }
+)
+const DiffActionPopup = dynamic(
+    () => import("@/components/diff-action-popup").then((mod) => mod.DiffActionPopup),
+    { ssr: false }
+)
 import { FileExplorer } from "@/components/file-explorer"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +37,7 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Play, Save, Loader2, RefreshCw } from "lucide-react"
+import { applyDiffChanges, type FileDiff, type DiffLine } from "@/lib/diff-parser"
 
 interface File {
     name: string
@@ -71,6 +80,12 @@ export default function CodePage() {
     const [isWorkerReady, setIsWorkerReady] = useState(false)
     const [workerError, setWorkerError] = useState<string | null>(null)
 
+    // Diff review state
+    const [pendingDiffs, setPendingDiffs] = useState<FileDiff[]>([])
+    const [showDiffReview, setShowDiffReview] = useState(false)
+    const [activeDiffLines, setActiveDiffLines] = useState<DiffLine[]>([])
+    const [pendingChanges, setPendingChanges] = useState<{ filename: string; changes: DiffLine[] } | null>(null)
+
     // Load initial code
     useEffect(() => {
         const savedFiles = localStorage.getItem("code-files")
@@ -84,10 +99,18 @@ export default function CodePage() {
         setIsLoaded(true)
     }, [])
 
-    // Autosave
+    // Autosave - save to localStorage AND backend on every change
     useEffect(() => {
-        if (isLoaded) {
+        if (isLoaded && files.length > 0) {
+            // Save to localStorage
             localStorage.setItem("code-files", JSON.stringify(files))
+
+            // Save to backend for AI agent
+            fetch("http://localhost:4000/api/save-files", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ files })
+            }).catch(e => console.error("Auto-save failed:", e))
         }
     }, [files, isLoaded])
 
@@ -218,6 +241,40 @@ export default function CodePage() {
         }
     }
 
+    // Diff review handlers
+    const handleDiffsDetected = (diffs: FileDiff[]) => {
+        if (diffs.length === 0) return
+
+        // Show decorations for the active file and keep them persistent
+        diffs.forEach(diff => {
+            if (diff.filename === activeFile) {
+                setActiveDiffLines(diff.changes)
+                setPendingChanges({ filename: diff.filename, changes: diff.changes })
+            }
+        })
+    }
+
+    const handleAcceptChanges = () => {
+        if (!pendingChanges) return
+
+        const targetFile = files.find(f => f.name === pendingChanges.filename)
+        if (!targetFile) return
+
+        // Apply the changes
+        const newContent = applyDiffChanges(targetFile.content, pendingChanges.changes)
+        setFiles(prev => prev.map(f => f.name === pendingChanges.filename ? { ...f, content: newContent } : f))
+
+        // Clear decorations and pending state
+        setActiveDiffLines([])
+        setPendingChanges(null)
+    }
+
+    const handleRejectChanges = () => {
+        // Just clear the decorations without applying changes
+        setActiveDiffLines([])
+        setPendingChanges(null)
+    }
+
     return (
         <div className="flex min-h-screen flex-col bg-[#F9F9F6]">
             {/* Site Header / Logo */}
@@ -233,72 +290,73 @@ export default function CodePage() {
                 </div>
             </nav>
 
-            <div className="flex-1 flex flex-col p-4 pt-0 max-w-[1600px] w-full mx-auto">
+            <div className="flex-1 flex flex-col p-4 pt-0 max-w-[1600px] w-full mx-auto relative">
                 {/* Unified IDE Container */}
                 <div className="flex flex-col rounded-2xl overflow-hidden border border-border shadow-2xl shadow-black/5 bg-[#1e1e1e]">
-                    {/* Top Row: Editor + AI Chat */}
-                    <div className="grid lg:grid-cols-[1fr_400px]">
-                        {/* Main Content Area: Editor + Explorer */}
-                        <div className="flex flex-col">
-                            <Card className="flex flex-1 flex-col overflow-hidden border-none rounded-none bg-[#1e1e1e] h-[500px] shadow-none">
-                                <div className="flex h-full">
-                                    {/* File Explorer Sidebar */}
-                                    <div className="w-56 h-full border-r border-border">
-                                        <FileExplorer
-                                            files={files}
-                                            activeFile={activeFile}
-                                            onSelectFile={setActiveFile}
-                                            onCreateFile={handleCreateFile}
-                                            onDeleteFile={handleDeleteFile}
-                                        />
-                                    </div>
+                    {/* 3-Column Layout: Explorer | Editor+Terminal | Codex */}
+                    <div className="grid lg:grid-cols-[250px_1fr_400px] h-[880px]">
+                        {/* Left Sidebar: File Explorer - Full Height */}
+                        <div className="h-full border-r border-border">
+                            <FileExplorer
+                                files={files}
+                                activeFile={activeFile}
+                                onSelectFile={setActiveFile}
+                                onCreateFile={handleCreateFile}
+                                onDeleteFile={handleDeleteFile}
+                            />
+                        </div>
 
-                                    {/* Editor Area */}
-                                    <div className="flex-1 flex flex-col min-w-0">
-                                        <div className="flex items-center justify-between border-b border-border bg-[#252525] p-4 h-14">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{activeFile}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex-1 relative">
-                                            <CodeEditor
-                                                className="absolute inset-0 border-none rounded-none"
-                                                value={getActiveContent()}
-                                                onChange={(value) => updateActiveContent(value || "")}
-                                            />
-                                        </div>
+                        {/* Middle: Editor + Terminal */}
+                        <div className="flex flex-col h-full">
+                            {/* Top: Editor */}
+                            <Card className="flex flex-1 flex-col overflow-hidden border-none rounded-none bg-[#1e1e1e] h-[600px] shadow-none">
+                                <div className="flex items-center justify-between border-b border-border bg-[#252525] p-4 h-14">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{activeFile}</span>
                                     </div>
                                 </div>
+                                <div className="flex-1 relative">
+                                    <CodeEditor
+                                        className="absolute inset-0 border-none rounded-none"
+                                        value={getActiveContent()}
+                                        onChange={(value) => updateActiveContent(value || "")}
+                                        pendingDiffs={activeDiffLines}
+                                    />
+                                </div>
+                            </Card>
+
+                            {/* Bottom: Terminal */}
+                            <Card className="overflow-hidden flex flex-col h-[280px] border-t border-border border-b-0 border-x-0 rounded-none bg-[#1e1e1e] shadow-none">
+                                <CardHeader className="py-2 px-4 border-b border-border bg-[#252525] min-h-[40px] flex flex-row items-center justify-between space-y-0">
+                                    <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Local Terminal (WS)</CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex-1 p-0 overflow-hidden bg-[#1e1e1e]">
+                                    <SocketTerminal />
+                                </CardContent>
                             </Card>
                         </div>
 
-                        {/* Right Sidebar: AI Chat */}
-                        <div className="flex flex-col h-[500px]">
-                            <AiChat files={files} className="h-full shadow-sm border border-border" onFilesChanged={reloadFilesFromWorkspace} />
+                        {/* Right Sidebar: AI Chat - Full Height */}
+                        <div className="h-full border-l border-border">
+                            <AiChat
+                                files={files}
+                                className="h-full shadow-sm"
+                                onFilesChanged={reloadFilesFromWorkspace}
+                                onDiffsDetected={handleDiffsDetected}
+                            />
                         </div>
                     </div>
 
-                    {/* Bottom Row: Terminal */}
-                    <Card className="overflow-hidden flex flex-col h-[280px] border-t border-border border-b-0 border-x-0 rounded-none bg-[#1e1e1e] shadow-none">
-                        <CardHeader className="py-2 px-4 border-b border-border bg-[#252525] min-h-[40px] flex flex-row items-center justify-between space-y-0">
-                            <CardTitle className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Local Terminal (WS)</CardTitle>
-                            <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm" onClick={handleRun} disabled={isRunning} className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/10">
-                                    {isRunning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Play className="h-3 w-3 mr-1" />}
-                                    Run
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={handleReset} className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/10">
-                                    <RefreshCw className="h-3 w-3 mr-1" />
-                                    Reset
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="flex-1 p-0 bg-[#1e1e1e] border-none relative">
-                            <div className="absolute inset-0">
-                                <SocketTerminal />
-                            </div>
-                        </CardContent>
-                    </Card>
+                    {/* Diff Action Popup - positioned over IDE */}
+                    {pendingChanges && (
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50">
+                            <DiffActionPopup
+                                onAccept={handleAcceptChanges}
+                                onReject={handleRejectChanges}
+                                changeCount={pendingChanges.changes.filter(c => c.type !== 'context').length}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

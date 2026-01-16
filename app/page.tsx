@@ -25,11 +25,11 @@ export default function Home() {
             Beta Access
           </div>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground leading-[1.1]">
-            <span className="block">Ditch the</span>
-            <span className="block text-secondary">LeetCode Grind.</span>
+            <span className="block">Measure how engineers</span>
+            <span className="block text-secondary">actually work.</span>
           </h1>
           <p className="text-xl text-secondary max-w-2xl mx-auto leading-relaxed">
-            The modern platform for engineering judgment. Design scenario-based technical interviews that focus on tradeoffs, decisions, and actual engineering work.
+            Traditional OAs test puzzles in isolation. Censeo evaluates reasoning, structure, and execution while candidates work with AI, tools, and documentation in modern engineering environments.
           </p>
 
           <div className="flex flex-col items-center justify-center gap-2 pt-4">
@@ -53,22 +53,22 @@ export default function Home() {
             <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mb-4 text-accent">
               <CheckCircle2 className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold">Real Scenarios</h3>
-            <p className="text-secondary">Replace algorithmic puzzles with realistic system design and tradeoff discussions.</p>
+            <h3 className="text-xl font-bold">Reasoning & Execution</h3>
+            <p className="text-secondary">We measure how problems are approached, tools are used, and decisions are justified, not just whether an answer is correct.</p>
           </div>
           <div className="space-y-4">
             <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mb-4 text-accent">
               <CheckCircle2 className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold">Asynchronous</h3>
-            <p className="text-secondary">Respect candidate time. Allow them to think deeply and respond without a timer staring them down.</p>
+            <h3 className="text-xl font-bold">Modern Workflows</h3>
+            <p className="text-secondary">Engineers use AI every day. Our assessments evaluate candidates as they work with AI and real-world documentation.</p>
           </div>
           <div className="space-y-4">
             <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mb-4 text-accent">
               <CheckCircle2 className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold">Human Review</h3>
-            <p className="text-secondary">AI assists with summarization, but human engineers make the final hiring decision.</p>
+            <h3 className="text-xl font-bold">Signal over Noise</h3>
+            <p className="text-secondary">Identify engineers who can operate effectively in real world conditions, ensuring hiring decisions translate to on-the-job performance.</p>
           </div>
         </div>
       </section>

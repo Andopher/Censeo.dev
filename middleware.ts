@@ -31,6 +31,8 @@ export async function middleware(request: NextRequest) {
                         name,
                         value,
                         ...options,
+                        // Ensure session is long-lived if desired
+                        maxAge: 60 * 60 * 24 * 7, // 7 days fallback
                     })
                 },
                 remove(name: string, options) {
@@ -54,8 +56,12 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // Refresh session if expired - this is critical for PKCE flow
-    await supabase.auth.getUser()
+    // IMPORTANT: Refresh session if expired
+    // We use getUser() to ensure the session is active and refresh the cookie if needed
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // Optionally handle protected routes here
+    // but the main goal is to refresh the cookie
 
     return response
 }

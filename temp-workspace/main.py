@@ -1,5 +1,7 @@
 from utils import greet, factorial
 
 print(greet("World"))
-print(f"5! = {factorial(5)}")
-print("toast")
+for i in range(1, 6):
+    print(f"{i}! = {factorial(i)}")
+for i in range(5):
+    print(f"Loop iteration: {i}")
